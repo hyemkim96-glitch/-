@@ -739,9 +739,8 @@ export default function ResultsPage() {
               데이터를 불러오는 중입니다 (최대 15초)
             </div>
           )}
-          <div style={{ margin: '12px 20px 0', padding: '10px 14px', borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--line)', fontSize: 13, fontWeight: 600, color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span>ℹ️</span>
-            <span>표시된 가격은 최근 3개월 실거래 <b style={{ color: 'var(--ink-2)' }}>평균가</b>로, 실제 매물 가격과 다를 수 있습니다.</span>
+          <div style={{ margin: '12px 20px 0', padding: '10px 14px', borderRadius: 10, background: 'var(--line)', fontSize: 13, fontWeight: 600, color: 'var(--ink-3)' }}>
+            표시된 가격은 최근 3개월 실거래 <b style={{ color: 'var(--ink-2)' }}>평균가</b>로, 실제 매물 가격과 다를 수 있습니다.
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 20px' }}>
             {loading
