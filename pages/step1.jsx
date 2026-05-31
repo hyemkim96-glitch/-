@@ -1,8 +1,8 @@
 // pages/step1.jsx — 기본 정보 입력
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { getFormData, setFormData } from '../lib/storage';
-import { formatKRW } from '../components/shared';
+import { getFormData, setFormData, getPrefsData, setPrefsData } from '../lib/storage';
+import { formatKRW, Chip } from '../components/shared';
 import { Button } from '../components/shared';
 import { Screen, Footer, ProgressHead } from '../components/layout/Screen';
 import { IconSearch, IconPin } from '../components/icons';
@@ -42,9 +42,19 @@ function MoneyField({ label, placeholder, value, onChange }) {
   );
 }
 
+function OptionGroup({ title, children }) {
+  return (
+    <div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 12 }}>{title}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>{children}</div>
+    </div>
+  );
+}
+
 export default function Step1Page() {
   const router = useRouter();
   const [form, setFormLocal] = useState({ asset: '', income: '', work: '' });
+  const [prefs, setPrefsLocal] = useState({ housing: '전월세', transport: '대중교통' });
   const [focus, setFocus] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [isFallback, setIsFallback] = useState(false);
@@ -55,12 +65,19 @@ export default function Step1Page() {
 
   useEffect(() => {
     setFormLocal(getFormData());
+    setPrefsLocal(getPrefsData());
   }, []);
 
   function updateForm(patch) {
     const next = { ...form, ...patch };
     setFormLocal(next);
     setFormData(next);
+  }
+
+  function updatePrefs(patch) {
+    const next = { ...prefs, ...patch };
+    setPrefsLocal(next);
+    setPrefsData(next);
   }
 
   async function fetchSuggestions(val) {
@@ -119,10 +136,15 @@ export default function Step1Page() {
 
   const filled = !!(form.asset && form.income && form.work && form.work.trim());
 
+  function goToResults() {
+    sessionStorage.setItem('zipter_new_search', '1');
+    router.push('/results');
+  }
+
   const header = <ProgressHead step={1} onBack={() => router.push('/')} />;
   const footer = (
     <Footer>
-      <Button onClick={() => router.push('/step2')} disabled={!filled}>다음 →</Button>
+      <Button onClick={goToResults} disabled={!filled}>결과 보기</Button>
     </Footer>
   );
 
@@ -131,6 +153,11 @@ export default function Step1Page() {
       <div style={{ padding: '22px 20px 8px' }}>
         <h1 style={{ margin: '0 0 24px', fontSize: 24, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>기본 정보를 입력해주세요</h1>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+          <OptionGroup title="주거 형태">
+            <Chip label="전월세" selected={prefs.housing === '전월세'} onClick={() => updatePrefs({ housing: '전월세' })} />
+            <Chip label="전세만" selected={prefs.housing === '전세'} onClick={() => updatePrefs({ housing: '전세' })} />
+            <Chip label="월세만" selected={prefs.housing === '월세'} onClick={() => updatePrefs({ housing: '월세' })} />
+          </OptionGroup>
           <MoneyField label="보유 자산" placeholder="예: 5,000" value={form.asset} onChange={(v) => updateForm({ asset: v })} />
           <MoneyField label="월 소득 (세후)" placeholder="예: 320" value={form.income} onChange={(v) => updateForm({ income: v })} />
           <div>

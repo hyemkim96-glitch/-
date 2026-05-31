@@ -196,7 +196,8 @@ function ResultCard({ item, onExpand }) {
       </div>
       <div style={{ marginTop: 15, display: 'flex', gap: 14, flexWrap: 'wrap', rowGap: 8 }}>
         <MiniStat label="월 고정비" value={`${item.monthlyMan}만원`} />
-        <MiniStat label="출퇴근" value={item.commuteLabel} />
+        <MiniStat label="" value={item.transitLabel} />
+        <MiniStat label="" value={item.carLabel} />
       </div>
     </div>
   );
@@ -349,7 +350,9 @@ function ExpandedSheet({ item, onClose, myAsset }) {
           <div style={{ marginTop: 18, display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: '14px 0', overflow: 'hidden' }}>
             <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={`${item.monthlyMan}만원`} note="관리비 포함" />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
-            <DetailStat icon={<IconWalk size={21} />} label="출퇴근" value={item.commuteLabel} />
+            <DetailStat icon={<IconWalk size={21} />} label="대중교통" value={item.transitLabel} />
+            <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
+            <DetailStat icon={<IconWalk size={21} />} label="자가용" value={item.carLabel} />
           </div>
           {item.breakdown && (
             <>
@@ -457,15 +460,18 @@ function estimateCommute(km, transport) {
   return Math.round(km / 28 * 60 + 10);
 }
 
-async function buildResults({ asset, income, transport, workLat, workLng, loan, loanRate }) {
+async function buildResults({ asset, income, workLat, workLng, loan, loanRate }) {
   const wx = workLng || 126.9780;
   const wy = workLat || 37.5665;
 
-  // 모든 API 병렬 호출: 실거래가 + 출퇴근 + 생활권
   const uniqueLawdCds = [...new Set(CANDIDATE_REGIONS.map((r) => r.lawdCd).filter(Boolean))];
 
-  const [priceResults, commuteResults, facilityResults] = await Promise.all([
-    // 실거래가 (지역 중복 제거 후 병렬)
+  const fetchCommute = (region, transport) =>
+    fetch(`/api/commute?ox=${wx}&oy=${wy}&dx=${region.coords.lng}&dy=${region.coords.lat}&transport=${encodeURIComponent(transport)}`)
+      .then((r) => r.json())
+      .catch(() => null);
+
+  const [priceResults, commuteTransit, commuteCar, facilityResults] = await Promise.all([
     Promise.all(uniqueLawdCds.map(async (lawdCd) => {
       try {
         const r = await fetch(`/api/prices?lawdCd=${lawdCd}&umdNm=`);
@@ -473,19 +479,8 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
       } catch {}
       return [lawdCd, null];
     })),
-    // 출퇴근 (지역별 병렬)
-    Promise.all(CANDIDATE_REGIONS.map(async (region) => {
-      try {
-        const r = await fetch(
-          `/api/commute?ox=${wx}&oy=${wy}&dx=${region.coords.lng}&dy=${region.coords.lat}&transport=${encodeURIComponent(transport || '대중교통')}`
-        );
-        const d = await r.json();
-        return { minutes: d.minutes, isEstimated: d.isEstimated };
-      } catch {
-        return null;
-      }
-    })),
-    // 생활권 (지역별 병렬)
+    Promise.all(CANDIDATE_REGIONS.map((region) => fetchCommute(region, '대중교통'))),
+    Promise.all(CANDIDATE_REGIONS.map((region) => fetchCommute(region, '자가용'))),
     Promise.all(CANDIDATE_REGIONS.map(async (region) => {
       try {
         const r = await fetch(`/api/facilities?lat=${region.coords.lat}&lng=${region.coords.lng}`);
@@ -508,18 +503,19 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
     const liveRent   = live?.oneroom?.wolseRent || region.avgRentMan;
     const liveRentDep = live?.oneroom?.wolseDeposit || Math.round(liveJeonsa * 0.1);
 
-    // 출퇴근
-    const commuteData = commuteResults[idx];
-    let commuteMin = commuteData?.minutes ?? null;
-    let isEstimated = commuteData ? commuteData.isEstimated : true;
-    if (commuteMin == null) {
-      const km = haversineKm(wy, wx, region.coords.lat, region.coords.lng);
-      commuteMin = estimateCommute(km, transport);
-      isEstimated = true;
-    }
+    // 출퇴근 (대중교통 + 자가용)
+    const km = haversineKm(wy, wx, region.coords.lat, region.coords.lng);
 
-    // 출퇴근 90분 초과 지역 제외
-    if (commuteMin > 90) return;
+    const transitData = commuteTransit[idx];
+    const transitMin = transitData?.minutes ?? estimateCommute(km, '대중교통');
+    const transitEstimated = !transitData?.minutes;
+
+    const carData = commuteCar[idx];
+    const carMin = carData?.minutes ?? estimateCommute(km, '자가용');
+    const carEstimated = !carData?.minutes;
+
+    // 대중교통 기준으로 90분 초과 지역 제외
+    if (transitMin > 90 && carMin > 90) return;
 
     // 생활권
     const life = facilityResults[idx] || region.defaultLife;
@@ -544,7 +540,7 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
 
       if (income > 0 && monthlyMan > income * MAX_AFFORDABLE_RATIO) continue;
 
-      const cs = commuteScore(commuteMin);
+      const cs = commuteScore(transitMin);
       const ps = priceScore(monthlyMan, income);
       const ls = lifeScore(life, CANDIDATE_REGIONS.map((r) => r.defaultLife));
       const score = totalScore(cs, ps, ls);
@@ -558,8 +554,8 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
       const priceLabel = opt.type === '전세'
         ? formatKRW(deposit)
         : `보증금 ${formatKRW(opt.depositForRent || 0)} · 월 ${rentMan}만원`;
-      const transportIcon = (transport === '자가용') ? '🚗' : '🚇';
-      const commuteLabel = `${transportIcon} ${commuteMin}분${isEstimated ? '*' : ''}`;
+      const transitLabel = `🚇 ${transitMin}분${transitEstimated ? '*' : ''}`;
+      const carLabel = `🚗 ${carMin}분${carEstimated ? '*' : ''}`;
 
       results.push({
         id: `${region.id}_${opt.type}`,
@@ -573,8 +569,9 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
         priceLabel,
         capitalMan,
         monthlyMan,
-        commuteMin,
-        commuteLabel,
+        commuteMin: transitMin,
+        transitLabel,
+        carLabel,
         life,
         score,
         breakdown,
@@ -606,17 +603,16 @@ export default function ResultsPage() {
     const assetVal = parseInt(f.asset || '0', 10);
     setMyAsset(assetVal);
     setWorkCoords({ lat: f.workLat || null, lng: f.workLng || null });
-    setFilters((prev) => ({ ...prev, type: p.housing === '전세' ? '전세만' : p.housing === '월세' ? '월세만' : '전체' }));
+    setFilters((prev) => ({ ...prev, type: p.housing === '전세' ? '전세만' : p.housing === '월세' ? '월세만' : '전체', sort: prev.sort || 'score' }));
 
     const slowTimer = setTimeout(() => setSlowWarning(true), 3000);
 
     buildResults({
       asset: assetVal,
       income: parseInt(f.income || '0', 10),
-      transport: p.transport || '대중교통',
       workLat: f.workLat || null,
       workLng: f.workLng || null,
-      loan: true,  // 항상 전체 계산, 대출 필터는 프론트에서
+      loan: true,
       loanRate: 3.5,
     }).then((results) => {
       clearTimeout(slowTimer);
@@ -754,7 +750,7 @@ export default function ResultsPage() {
                 )
                 : filtered.map((item) => <ResultCard key={item.id} item={item} onExpand={setExpanded} />)
             }
-            {!loading && filtered.some((i) => i.commuteLabel.includes('*')) && (
+            {!loading && filtered.some((i) => i.transitLabel?.includes('*') || i.carLabel?.includes('*')) && (
               <p style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', margin: '4px 0 8px' }}>
                 * 출퇴근 시간은 직선거리 기반 추정값입니다
               </p>
