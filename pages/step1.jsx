@@ -73,6 +73,7 @@ export default function Step1Page() {
         setSuggestions(docs.map((d) => ({
           name: d.place_name || d.address_name,
           address: d.place_name ? d.address_name : null,
+          category: d.category_name ? d.category_name.split('>').pop().trim() : null,
           lat: parseFloat(d.y),
           lng: parseFloat(d.x),
         })));
@@ -169,7 +170,10 @@ export default function Step1Page() {
                   >
                     <span style={{ color: 'var(--ink-3)', display: 'flex', flexShrink: 0 }}><IconPin size={18} /></span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
+                        {s.category && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-weak)', padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap', flexShrink: 0 }}>{s.category}</span>}
+                      </div>
                       {s.address && <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.address}</span>}
                     </div>
                   </div>
