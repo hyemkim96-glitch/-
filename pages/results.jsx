@@ -508,6 +508,7 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
         life,
         score,
         noData: false,
+        needsLoan: deposit > asset,
       });
     }
   }
@@ -540,7 +541,7 @@ export default function ResultsPage() {
       transport: p.transport || '대중교통',
       workLat: f.workLat || null,
       workLng: f.workLng || null,
-      loan: false,
+      loan: true,  // 항상 전체 계산, 대출 필터는 프론트에서
       loanRate: 3.5,
     }).then((results) => {
       clearTimeout(slowTimer);
@@ -571,6 +572,7 @@ export default function ResultsPage() {
   // 필터 + 정렬 적용
   const filtered = allResults
     .filter((item) => {
+      if (!filters.loan && item.needsLoan) return false;
       if (filters.type === '전세만' && item.type !== '전세') return false;
       if (filters.type === '월세만' && item.type !== '월세') return false;
       return true;
