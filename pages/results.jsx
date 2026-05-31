@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getFormData, getPrefsData, addHistory } from '../lib/storage';
-import { commuteScore, priceScore, lifeScore, totalScore } from '../lib/score';
+import { commuteScore, priceScore, lifeScore, totalScore, MAX_AFFORDABLE_RATIO } from '../lib/score';
 import { CANDIDATE_REGIONS, ScoreBadge, regionLabel, scoreFg, gradeColors, formatKRW } from '../components/shared';
 import { MapCanvas } from '../components/layout/Screen';
 import {
@@ -300,10 +300,30 @@ function DetailStat({ icon, label, value, note }) {
   );
 }
 
+// ── ScoreFactor: 추천 근거 막대 ────────────────────────────────────
+function ScoreFactor({ label, weight, score }) {
+  const fg = score >= 75 ? 'var(--accent)' : score >= 50 ? 'var(--good)' : 'var(--mid)';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-2)', width: 76, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-3)', width: 30, flexShrink: 0 }}>{weight}</span>
+      <div style={{ flex: 1, height: 7, borderRadius: 999, background: 'var(--line)', overflow: 'hidden' }}>
+        <div style={{ width: `${score}%`, height: '100%', borderRadius: 999, background: fg, transition: 'width .3s ease' }} />
+      </div>
+      <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--ink)', width: 26, textAlign: 'right', flexShrink: 0 }}>{score}</span>
+    </div>
+  );
+}
+
 // ── ExpandedSheet ─────────────────────────────────────────────────
 function ExpandedSheet({ item, onClose, myAsset }) {
-  const typeParam = item.type === '전세' ? 'jeonse' : 'monthly';
-  const dabangUrl = `https://www.dabangapp.com/map/oneroom?search_type=location&search_query=${encodeURIComponent(item.dong)}&trade_type=${typeParam}`;
+  // 다방은 좌표 기반 지도 URL이 가장 안정적으로 해당 동네 매물을 보여준다
+  // (자유 텍스트 검색 URL은 동작이 불안정함). 거래유형은 지도 로드 후 필터로 선택.
+  const lat = item.coords?.lat;
+  const lng = item.coords?.lng;
+  const dabangUrl = (lat && lng)
+    ? `https://www.dabangapp.com/map/onetwo?m_lat=${lat}&m_lng=${lng}&m_zoom=15`
+    : `https://www.dabangapp.com/search/${encodeURIComponent(item.dong)}`;
 
 
 
@@ -340,6 +360,16 @@ function ExpandedSheet({ item, onClose, myAsset }) {
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
             <DetailStat icon={<IconWalk size={21} />} label="출퇴근" value={item.commuteLabel} />
           </div>
+          {item.breakdown && (
+            <>
+              <div style={{ marginTop: 22, fontSize: 15, fontWeight: 800, color: 'var(--ink)' }}>추천 근거</div>
+              <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <ScoreFactor label="직주근접" weight="50%" score={item.breakdown.commute} />
+                <ScoreFactor label="가격 적정성" weight="35%" score={item.breakdown.price} />
+                <ScoreFactor label="생활 편의" weight="15%" score={item.breakdown.life} />
+              </div>
+            </>
+          )}
           {item.life && (
             <>
               <div style={{ marginTop: 22, fontSize: 15, fontWeight: 800, color: 'var(--ink)' }}>생활권 요약</div>
@@ -360,7 +390,7 @@ function ExpandedSheet({ item, onClose, myAsset }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                 background: '#FF4076', color: '#fff',
               }}>
-                다방에서 {item.dong} {item.type} 보기 <IconExternal size={18} />
+다방에서 {item.dong} 매물 보기 <IconExternal size={18} />
               </button>
             </a>
           </div>
@@ -383,13 +413,16 @@ function ResultsKakaoMap({ items, onExpand, workLat, workLng }) {
         const center = new kakao.maps.LatLng(37.5326, 126.9903);
         const map = new kakao.maps.Map(containerRef.current, { center, level: 8 });
 
-        // 추천 지역 핀
+        // 추천 지역 핀 — 클릭 시 상세보기
         items.forEach((item) => {
           if (!item.coords) return;
           const pos = new kakao.maps.LatLng(item.coords.lat, item.coords.lng);
           const fg = gradeColors(item.score).fg.replace('var(--accent)', '#3182F6').replace('var(--good)', '#15B97E').replace('var(--mid)', '#F59000');
-          const content = `<div onclick="void(0)" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:999px;white-space:nowrap;background:#fff;font-weight:700;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,0.16);font-family:Pretendard,sans-serif;cursor:pointer;">${item.dong}<span style="font-weight:800;color:${fg}">&nbsp;${item.score}점</span></div>`;
-          const overlay = new kakao.maps.CustomOverlay({ position: pos, content, yAnchor: 1.3 });
+          const el = document.createElement('div');
+          el.style.cssText = 'display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:999px;white-space:nowrap;background:#fff;font-weight:700;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,0.16);font-family:Pretendard,sans-serif;cursor:pointer;';
+          el.innerHTML = `${item.dong}<span style="font-weight:800;color:${fg}">&nbsp;${item.score}점</span>`;
+          el.addEventListener('click', () => onExpand && onExpand(item));
+          const overlay = new kakao.maps.CustomOverlay({ position: pos, content: el, yAnchor: 1.3, clickable: true });
           overlay.setMap(map);
         });
 
@@ -484,21 +517,24 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
         if (total > 0) life = apiLife;
       } catch {}
 
-      // 출퇴근 90분 초과 지역 제외
+      // 출퇴근 90분 초과 지역 제외 (직주근접 핵심 — 너무 먼 곳은 후보 아님)
       if (commuteMin > 90) continue;
 
-      // 스코어 계산 — 월 고정비/소득 비율 기반 가격 점수 (소득 없으면 평균 시세 상대값 fallback)
+      // 감당 불가 제외 — 월 고정비가 소득의 70% 초과면 후보에서 뺀다
+      if (income > 0 && monthlyMan > income * MAX_AFFORDABLE_RATIO) continue;
+
+      // 세부 점수 (각 0~1) → 가중치 적용
       const cs = commuteScore(commuteMin);
-      let ps;
-      if (income > 0) {
-        ps = priceScore(monthlyMan, income * 0.4); // 소득의 40%를 기준점으로
-      } else {
-        const avgPrice = opt.type === '전세' ? region.avgJeonsaMan : (region.avgRentMan * 100);
-        const itemPrice = opt.type === '전세' ? deposit : (rentMan * 100);
-        ps = priceScore(itemPrice, avgPrice);
-      }
+      const ps = priceScore(monthlyMan, income);
       const ls = lifeScore(life, CANDIDATE_REGIONS.map((r) => r.defaultLife));
       const score = totalScore(cs, ps, ls);
+
+      // 점수 근거 (상세 화면 표시용)
+      const breakdown = {
+        commute: Math.round(cs * 100),
+        price: Math.round(ps * 100),
+        life: Math.round(ls * 100),
+      };
 
       // 가격 레이블
       const priceLabel = opt.type === '전세'
@@ -523,6 +559,7 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
         commuteLabel,
         life,
         score,
+        breakdown,
         noData: false,
         needsLoan: deposit > asset,
       });
