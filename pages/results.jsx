@@ -171,15 +171,33 @@ function DetailStat({ icon, label, value }) {
 
 // ── ExpandedSheet ─────────────────────────────────────────────────
 function ExpandedSheet({ item, onClose }) {
-  // 직방 딥링크: 좌표 기반 지도 이동 + 필터 적용
-  // salesType: jeonse(전세) | monthly(월세)
   const salesType = item.type === '전세' ? 'jeonse' : 'monthly';
   const depositMax = item.type === '전세' ? item.depositMan : (item.depositForRent || 3000);
   const lat = item.coords?.lat;
   const lng = item.coords?.lng;
-  const zigbangUrl = lat && lng
-    ? `https://www.zigbang.com/home/oneroom?lat=${lat}&lng=${lng}&zoom=14&salesType=${salesType}&depositMin=0&depositMax=${depositMax}`
-    : `https://www.zigbang.com/home/search?q=${encodeURIComponent(`${item.gu} ${item.dong}`)}&salesType=${salesType}`;
+  const query = encodeURIComponent(`${item.gu} ${item.dong} ${item.type}`);
+  const addrQuery = encodeURIComponent(`${item.gu} ${item.dong}`);
+
+  // 플랫폼별 딥링크
+  const platformLinks = [
+    {
+      name: '직방',
+      url: lat && lng
+        ? `https://www.zigbang.com/home/oneroom?lat=${lat}&lng=${lng}&zoom=14&salesType=${salesType}&depositMin=0&depositMax=${depositMax}`
+        : `https://www.zigbang.com/home/search?q=${addrQuery}&salesType=${salesType}`,
+      color: '#FF5A35',
+    },
+    {
+      name: '다방',
+      url: `https://www.dabangapp.com/map/oneroom?lat=${lat || 37.5326}&lng=${lng || 126.9903}&zoom=14&type=${item.type === '전세' ? 'jeonse' : 'monthly'}`,
+      color: '#3D7FFF',
+    },
+    {
+      name: '네이버 부동산',
+      url: `https://land.naver.com/search/map.naver?query=${addrQuery}&dealType=${item.type === '전세' ? 'rent' : 'lease'}`,
+      color: '#03C75A',
+    },
+  ];
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 40 }}>
@@ -229,12 +247,21 @@ function ExpandedSheet({ item, onClose }) {
           )}
           <MiniMap item={item} />
           <div style={{ marginTop: 20 }}>
-            <a href={zigbangUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-              <button style={{ width: '100%', height: 56, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                background: 'var(--accent)', color: '#fff', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                직방에서 매물 보기 <IconExternal size={19} />
-              </button>
-            </a>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-3)', marginBottom: 10 }}>매물 보기</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {platformLinks.map((p) => (
+                <a key={p.name} href={p.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                  <button style={{
+                    width: '100%', height: 48, borderRadius: 12, border: 'none', cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 15, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    background: p.color, color: '#fff',
+                  }}>
+                    {p.name}에서 매물 보기 <IconExternal size={16} />
+                  </button>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </div>
