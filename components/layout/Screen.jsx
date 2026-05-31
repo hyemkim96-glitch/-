@@ -23,7 +23,7 @@ export function Footer({ children }) {
 export function ProgressHead({ step, onBack }) {
   const pct = step === 1 ? 50 : 100;
   return (
-    <div style={{ paddingTop: 50 }}>
+    <div style={{ paddingTop: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 16px 8px' }}>
         <button
           onClick={onBack}
