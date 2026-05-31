@@ -11,14 +11,16 @@ export default async function handler(req, res) {
       `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}&size=5`,
       { headers: { Authorization: `KakaoAK ${key}` } }
     );
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = {}; }
 
     // 카카오 API 에러 응답 그대로 전달 (디버깅용)
     if (!response.ok || data.errorType) {
-      return res.json({ documents: [], error: data.message || `HTTP ${response.status}`, errorType: data.errorType });
+      return res.json({ documents: [], error: data.message || `HTTP ${response.status}`, errorType: data.errorType, status: response.status });
     }
 
-    res.json({ documents: data.documents || [] });
+    res.json({ documents: data.documents || [], _debug: { status: response.status, total: data.meta?.total_count } });
   } catch (e) {
     res.json({ documents: [], error: e.message });
   }
