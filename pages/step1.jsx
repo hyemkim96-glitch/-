@@ -9,6 +9,15 @@ import { IconSearch, IconPin } from '../components/icons';
 
 const addCommas = (s) => s.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
+// API 키 없을 때 보여줄 예시 장소
+const FALLBACK_PLACES = [
+  { name: '강남구 테헤란로 (역삼역)', lat: 37.5001, lng: 127.0365 },
+  { name: '판교 카카오 아지트', lat: 37.3995, lng: 127.1077 },
+  { name: '여의도 IFC 서울', lat: 37.5252, lng: 126.9244 },
+  { name: '마포구 공덕역', lat: 37.5448, lng: 126.9517 },
+  { name: '성동구 성수동', lat: 37.5445, lng: 127.0559 },
+];
+
 function MoneyField({ label, placeholder, value, onChange }) {
   const formatted = addCommas(value);
   return (
@@ -38,7 +47,10 @@ export default function Step1Page() {
   const [form, setFormLocal] = useState({ asset: '', income: '', work: '' });
   const [focus, setFocus] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [isFallback, setIsFallback] = useState(false);
   const debounceRef = useRef(null);
+  // mousedown 중인지 추적 — blur보다 먼저 발생하므로 dropdown 닫힘 방지
+  const selectingRef = useRef(false);
 
   useEffect(() => {
     setFormLocal(getFormData());
@@ -51,23 +63,31 @@ export default function Step1Page() {
   }
 
   async function fetchSuggestions(val) {
-    if (!val || val.trim().length < 1) { setSuggestions([]); return; }
     try {
-      const res = await fetch(`/api/address?q=${encodeURIComponent(val.trim())}`);
+      const res = await fetch(`/api/address?q=${encodeURIComponent((val || '').trim() || '서울')}`);
       const data = await res.json();
-      setSuggestions(
-        (data.documents || []).map((d) => ({
+      const docs = (data.documents || []).filter(Boolean);
+      if (docs.length > 0) {
+        setSuggestions(docs.map((d) => ({
           name: d.place_name || d.address_name,
           lat: parseFloat(d.y),
           lng: parseFloat(d.x),
-        }))
-      );
+        })));
+        setIsFallback(false);
+      } else {
+        // API 키 미설정 or 결과 없음 → fallback 예시 표시
+        const filtered = val && val.trim()
+          ? FALLBACK_PLACES.filter((p) => p.name.includes(val.trim()))
+          : FALLBACK_PLACES;
+        setSuggestions(filtered.length > 0 ? filtered : FALLBACK_PLACES);
+        setIsFallback(true);
+      }
     } catch {
-      setSuggestions([]);
+      setSuggestions(FALLBACK_PLACES);
+      setIsFallback(true);
     }
   }
 
-  // suggestions: [{ name, lat, lng }]
   function handleWorkChange(val) {
     updateForm({ work: val, workLat: null, workLng: null });
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -76,19 +96,21 @@ export default function Step1Page() {
 
   function handleWorkFocus() {
     setFocus(true);
-    // 포커스 시 현재 입력값으로 즉시 검색
-    if (form.work && form.work.trim().length >= 1) {
-      fetchSuggestions(form.work);
-    }
+    fetchSuggestions(form.work);
+  }
+
+  function handleWorkBlur() {
+    // selectingRef가 true면 (드롭다운 항목 클릭 중) blur 무시
+    if (selectingRef.current) return;
+    setTimeout(() => setFocus(false), 100);
   }
 
   function selectSuggestion(s) {
+    selectingRef.current = false;
     updateForm({ work: s.name, workLat: s.lat, workLng: s.lng });
     setSuggestions([]);
     setFocus(false);
   }
-
-  const displaySuggestions = suggestions;
 
   const filled = !!(form.asset && form.income && form.work && form.work.trim());
 
@@ -117,18 +139,28 @@ export default function Step1Page() {
                 placeholder="회사 이름 또는 주소 검색"
                 onChange={(e) => handleWorkChange(e.target.value)}
                 onFocus={handleWorkFocus}
-                onBlur={() => setTimeout(() => setFocus(false), 150)}
+                onBlur={handleWorkBlur}
                 style={{ width: '100%', boxSizing: 'border-box', border: 'none', outline: 'none',
                   background: 'var(--surface)', borderRadius: 14, padding: '15px 16px 15px 46px',
                   fontSize: 16, fontWeight: 600, color: 'var(--ink)', fontFamily: 'inherit',
                   boxShadow: `inset 0 0 0 1.5px ${focus ? 'var(--accent)' : 'var(--line)'}` }}
               />
             </div>
-            {focus && (
+            {focus && suggestions.length > 0 && (
               <div style={{ marginTop: 8, background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.1), 0 0 0 1px var(--line)' }}>
-                {displaySuggestions.map((s, i) => (
-                  <div key={s.name} onMouseDown={() => selectSuggestion(s)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px', cursor: 'pointer', borderTop: i ? '1px solid var(--bg)' : 'none' }}>
+                {isFallback && (
+                  <div style={{ padding: '10px 16px 4px', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>
+                    예시 장소 (API 키 설정 시 실검색 가능)
+                  </div>
+                )}
+                {suggestions.map((s, i) => (
+                  <div
+                    key={s.name}
+                    onMouseDown={() => { selectingRef.current = true; }}
+                    onMouseUp={() => selectSuggestion(s)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px', cursor: 'pointer',
+                      borderTop: i ? '1px solid var(--bg)' : 'none' }}
+                  >
                     <span style={{ color: 'var(--ink-3)', display: 'flex' }}><IconPin size={18} /></span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{s.name}</span>
                   </div>

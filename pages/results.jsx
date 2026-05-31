@@ -31,8 +31,33 @@ function FilterPill({ label, chevron, active, toggle, on, onClick }) {
 }
 
 function FilterBar({ filters, setFilters }) {
+  const ref = useRef(null);
+  const drag = useRef({ active: false, startX: 0, scrollLeft: 0 });
+
+  function onMouseDown(e) {
+    drag.current = { active: true, startX: e.pageX - ref.current.offsetLeft, scrollLeft: ref.current.scrollLeft };
+    ref.current.style.cursor = 'grabbing';
+  }
+  function onMouseMove(e) {
+    if (!drag.current.active) return;
+    e.preventDefault();
+    const x = e.pageX - ref.current.offsetLeft;
+    ref.current.scrollLeft = drag.current.scrollLeft - (x - drag.current.startX);
+  }
+  function onMouseUp() {
+    drag.current.active = false;
+    if (ref.current) ref.current.style.cursor = 'grab';
+  }
+
   return (
-    <div style={{ display: 'flex', overflowX: 'auto', scrollbarWidth: 'none', gap: '4px', padding: '14px 20px' }}>
+    <div
+      ref={ref}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+      style={{ display: 'flex', overflowX: 'auto', scrollbarWidth: 'none', gap: '4px', padding: '14px 20px', cursor: 'grab', userSelect: 'none' }}
+    >
       <FilterPill label={filters.type} chevron active={filters.type !== '전체'} onClick={() => {
         const order = ['전체', '전세만', '월세만'];
         setFilters({ ...filters, type: order[(order.indexOf(filters.type) + 1) % 3] });
