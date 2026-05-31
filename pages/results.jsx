@@ -228,8 +228,18 @@ function MiniMap({ item }) {
       if (!kakao?.maps) return;
       kakao.maps.load(() => {
         const pos = new kakao.maps.LatLng(item.coords.lat, item.coords.lng);
-        const map = new kakao.maps.Map(containerRef.current, { center: pos, level: 5 });
-        new kakao.maps.Marker({ map, position: pos });
+        const map = new kakao.maps.Map(containerRef.current, { center: pos, level: 6 });
+        // 핀 대신 반경 원으로 표시 (특정 주소가 아닌 동네 범위임을 명확히)
+        new kakao.maps.Circle({
+          map,
+          center: pos,
+          radius: 700,
+          strokeWeight: 2,
+          strokeColor: '#3182F6',
+          strokeOpacity: 0.7,
+          fillColor: '#3182F6',
+          fillOpacity: 0.12,
+        });
       });
     }
     if (window.kakao?.maps) init();
@@ -250,14 +260,9 @@ function MiniMap({ item }) {
   return (
     <div style={{ marginTop: 22, position: 'relative', height: 170, borderRadius: 14, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
       <MapCanvas>
-        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 130, height: 130, borderRadius: 999,
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 140, height: 140, borderRadius: 999,
           background: 'rgba(49,130,246,0.10)', boxShadow: 'inset 0 0 0 1.5px rgba(49,130,246,0.35)' }} />
-        {[[34, 38], [66, 34], [60, 64], [40, 66], [72, 52]].map(([x, y], i) => (
-          <div key={i} style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, transform: 'translate(-50%,-50%)', width: 9, height: 9, borderRadius: 999, background: '#fff', boxShadow: '0 0 0 2px var(--ink-3)' }} />
-        ))}
-        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-100%)', color: 'var(--accent)' }}>
-          <div style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.25))' }}><IconPin size={32} style={{ color: 'var(--accent)' }} /></div>
-        </div>
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 8, height: 8, borderRadius: 999, background: '#3182F6', opacity: 0.5 }} />
       </MapCanvas>
     </div>
   );
@@ -734,6 +739,10 @@ export default function ResultsPage() {
               데이터를 불러오는 중입니다 (최대 15초)
             </div>
           )}
+          <div style={{ margin: '12px 20px 0', padding: '10px 14px', borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--line)', fontSize: 13, fontWeight: 600, color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span>ℹ️</span>
+            <span>표시된 가격은 최근 3개월 실거래 <b style={{ color: 'var(--ink-2)' }}>평균가</b>로, 실제 매물 가격과 다를 수 있습니다.</span>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 20px' }}>
             {loading
               ? [1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)
