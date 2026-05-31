@@ -193,7 +193,7 @@ function MiniStat({ icon, label, value }) {
 }
 
 // ── ResultCard ────────────────────────────────────────────────────
-function ResultCard({ item, onExpand }) {
+function ResultCard({ item, onExpand, myAsset }) {
   return (
     <div onClick={() => onExpand(item)} style={{ background: 'var(--surface)', borderRadius: 16, padding: 18, cursor: 'pointer', boxShadow: 'var(--card-shadow)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
@@ -210,7 +210,7 @@ function ResultCard({ item, onExpand }) {
         <span style={{ fontSize: 17.5, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{item.priceLabel}</span>
       </div>
       <div style={{ marginTop: 15, display: 'flex', gap: 14, flexWrap: 'wrap', rowGap: 8 }}>
-        <MiniStat label="자본금" value={formatKRW(item.capitalMan)} />
+        <MiniStat label="보유 자산" value={formatKRW(myAsset ?? item.capitalMan)} />
         <MiniStat label="월 고정비" value={`${item.monthlyMan}만원`} />
         <MiniStat label="출퇴근" value={item.commuteLabel} />
       </div>
@@ -302,7 +302,7 @@ function DetailStat({ icon, label, value, note }) {
 }
 
 // ── ExpandedSheet ─────────────────────────────────────────────────
-function ExpandedSheet({ item, onClose }) {
+function ExpandedSheet({ item, onClose, myAsset }) {
   const typeParam = item.type === '전세' ? 'jeonse' : 'monthly';
   const dabangUrl = `https://www.dabangapp.com/map/oneroom?search_type=location&search_query=${encodeURIComponent(item.dong)}&trade_type=${typeParam}`;
 
@@ -337,7 +337,7 @@ function ExpandedSheet({ item, onClose }) {
             </div>
           )}
           <div style={{ marginTop: 18, display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: '14px 0', overflow: 'hidden' }}>
-            <DetailStat icon={<IconWallet size={21} />} label="최소 자본금" value={formatKRW(item.capitalMan)} />
+            <DetailStat icon={<IconWallet size={21} />} label="보유 자산" value={formatKRW(myAsset ?? item.capitalMan)} />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
             <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={`${item.monthlyMan}만원`} note="관리비 포함" />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
@@ -528,16 +528,19 @@ export default function ResultsPage() {
   const [slowWarning, setSlowWarning] = useState(false);
   const [allResults, setAllResults] = useState([]);
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
+  const [myAsset, setMyAsset] = useState(0);
 
   useEffect(() => {
     const f = getFormData();
     const p = getPrefsData();
+    const assetVal = parseInt(f.asset || '0', 10);
+    setMyAsset(assetVal);
     setFilters((prev) => ({ ...prev, type: p.housing === '전세' ? '전세만' : p.housing === '월세' ? '월세만' : '전체' }));
 
     const slowTimer = setTimeout(() => setSlowWarning(true), 3000);
 
     buildResults({
-      asset: parseInt(f.asset || '0', 10),
+      asset: assetVal,
       income: parseInt(f.income || '0', 10),
       transport: p.transport || '대중교통',
       workLat: f.workLat || null,
@@ -655,7 +658,7 @@ export default function ResultsPage() {
             )
           }
         </div>
-        {expanded && <ExpandedSheet item={expanded} onClose={() => setExpanded(null)} />}
+        {expanded && <ExpandedSheet item={expanded} onClose={() => setExpanded(null)} myAsset={myAsset} />}
       </div>
     );
   }
@@ -681,7 +684,7 @@ export default function ResultsPage() {
                     <p style={{ marginTop: 8, fontSize: 14 }}>대출 포함 시 더 많은 결과를 볼 수 있습니다</p>
                   </div>
                 )
-                : filtered.map((item) => <ResultCard key={item.id} item={item} onExpand={setExpanded} />)
+                : filtered.map((item) => <ResultCard key={item.id} item={item} onExpand={setExpanded} myAsset={myAsset} />)
             }
             {!loading && filtered.some((i) => i.commuteLabel.includes('*')) && (
               <p style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', margin: '4px 0 8px' }}>
@@ -691,7 +694,7 @@ export default function ResultsPage() {
           </div>
         </div>
       </div>
-      {expanded && <ExpandedSheet item={expanded} onClose={() => setExpanded(null)} />}
+      {expanded && <ExpandedSheet item={expanded} onClose={() => setExpanded(null)} myAsset={myAsset} />}
     </>
   );
 }
