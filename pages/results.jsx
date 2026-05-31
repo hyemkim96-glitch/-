@@ -105,7 +105,7 @@ function ResultCard({ item, onExpand }) {
       </div>
       <div style={{ marginTop: 15, display: 'flex', gap: 14, flexWrap: 'wrap', rowGap: 8 }}>
         <MiniStat label="자본금" value={formatKRW(item.capitalMan)} />
-        <MiniStat label="월" value={`${item.monthlyMan}만원`} />
+        <MiniStat label="월 고정비" value={`${item.monthlyMan}만원`} />
         <MiniStat label="출퇴근" value={item.commuteLabel} />
       </div>
     </div>
@@ -184,12 +184,13 @@ function FacilityChip({ icon, label, count }) {
   );
 }
 
-function DetailStat({ icon, label, value }) {
+function DetailStat({ icon, label, value, note }) {
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '4px 0' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '4px 0' }}>
       <span style={{ color: 'var(--ink-3)', display: 'flex' }}>{icon}</span>
       <span style={{ fontSize: 11.5, color: 'var(--ink-3)', fontWeight: 600 }}>{label}</span>
       <span style={{ fontSize: 14.5, color: 'var(--ink)', fontWeight: 800, whiteSpace: 'nowrap' }}>{value}</span>
+      {note && <span style={{ fontSize: 10.5, color: 'var(--ink-3)', fontWeight: 500 }}>{note}</span>}
     </div>
   );
 }
@@ -232,7 +233,7 @@ function ExpandedSheet({ item, onClose }) {
           <div style={{ marginTop: 18, display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: '14px 6px' }}>
             <DetailStat icon={<IconWallet size={21} />} label="최소 자본금" value={formatKRW(item.capitalMan)} />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
-            <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={`${item.monthlyMan}만원`} />
+            <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={`${item.monthlyMan}만원`} note="관리비 포함" />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
             <DetailStat icon={<IconWalk size={21} />} label="출퇴근" value={item.commuteLabel} />
           </div>
@@ -307,13 +308,17 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
       const deposit = opt.type === '전세' ? opt.depositMan : (opt.depositForRent || 0);
       const rentMan = opt.type === '월세' ? opt.rentMan : 0;
 
-      // 예산 필터: 대출 미포함 시 자본금 ≤ 보유 자산
-      const capitalMan = Math.max(0, deposit - asset);
-      if (!loan && capitalMan > asset) continue;
+      // 예산 필터: 대출 미포함 시 보증금 ≤ 보유 자산
+      if (!loan && deposit > asset) continue;
 
-      // 월 고정비 계산
+      // 최소 자본금 = 보증금 (실제로 묶이는 돈)
+      const capitalMan = deposit;
+
+      // 월 고정비 = 대출이자 + 월세 + 관리비
+      // 대출 필요액: 보증금에서 보유 자산 초과분
+      const loanNeeded = Math.max(0, deposit - asset);
       const usedRate = loanRate || 3.5;
-      const monthlyInterest = Math.round((capitalMan * (usedRate / 100)) / 12);
+      const monthlyInterest = Math.round((loanNeeded * (usedRate / 100)) / 12);
       const monthlyMan = monthlyInterest + rentMan + (region.maintenanceFee || 0);
 
       // 출퇴근 시간 (API 호출, 실패 시 직선거리 추정)
