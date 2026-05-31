@@ -81,12 +81,15 @@ export default function Step1Page() {
   }
 
   async function fetchSuggestions(val) {
+    if (!val || !val.trim()) {
+      setSuggestions([]);
+      return;
+    }
     try {
-      const res = await fetch(`/api/address?q=${encodeURIComponent((val || '').trim() || '서울')}`);
+      const res = await fetch(`/api/address?q=${encodeURIComponent(val.trim())}`);
       const data = await res.json();
       const docs = (data.documents || []).filter(Boolean);
       if (docs.length > 0) {
-        setApiError(null);
         setSuggestions(docs.map((d) => ({
           name: d.place_name || d.address_name,
           address: d.place_name ? d.address_name : null,
@@ -96,29 +99,28 @@ export default function Step1Page() {
         })));
         setIsFallback(false);
       } else {
-        setApiError(data.error || data.errorType || null);
-        const filtered = val && val.trim()
-          ? FALLBACK_PLACES.filter((p) => p.name.includes(val.trim()))
-          : FALLBACK_PLACES;
-        setSuggestions(filtered.length > 0 ? filtered : FALLBACK_PLACES);
-        setIsFallback(true);
+        setSuggestions([{ noResult: true }]);
+        setIsFallback(false);
       }
-    } catch (e) {
-      setApiError(e.message);
-      setSuggestions(FALLBACK_PLACES);
-      setIsFallback(true);
+    } catch {
+      setSuggestions([{ noResult: true }]);
+      setIsFallback(false);
     }
   }
 
   function handleWorkChange(val) {
     updateForm({ work: val, workLat: null, workLng: null });
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!val || !val.trim()) {
+      setSuggestions([]);
+      return;
+    }
     debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
   }
 
   function handleWorkFocus() {
     setFocus(true);
-    if (form.work && form.work.trim()) fetchSuggestions(form.work);
+    if (form.work && form.work.trim() && !form.workLat) fetchSuggestions(form.work);
   }
 
   function handleWorkBlur() {
@@ -134,7 +136,7 @@ export default function Step1Page() {
     setFocus(false);
   }
 
-  const filled = !!(form.asset && form.income && form.work && form.work.trim());
+  const filled = !!(form.asset && form.income && form.work && form.work.trim() && form.workLat && form.workLng);
 
   function goToResults() {
     sessionStorage.setItem('zipter_new_search', '1');
@@ -180,12 +182,11 @@ export default function Step1Page() {
             </div>
             {focus && suggestions.length > 0 && (
               <div style={{ marginTop: 8, background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.1), 0 0 0 1px var(--line)' }}>
-                {isFallback && (
-                  <div style={{ padding: '10px 16px 4px', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>
-                    {apiError ? `API 오류: ${apiError}` : '예시 장소 (API 키 설정 시 실검색 가능)'}
+                {suggestions[0]?.noResult ? (
+                  <div style={{ padding: '16px', fontSize: 14, fontWeight: 600, color: 'var(--ink-3)', textAlign: 'center' }}>
+                    검색 결과가 없습니다.
                   </div>
-                )}
-                {suggestions.map((s, i) => (
+                ) : suggestions.map((s, i) => (
                   <div
                     key={s.name}
                     onMouseDown={(e) => { e.preventDefault(); selectingRef.current = true; }}
