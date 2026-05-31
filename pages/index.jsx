@@ -39,7 +39,7 @@ export default function HistoryPage() {
 
   const header = (
     <div style={{ paddingTop: 60, padding: '60px 20px 14px' }}>
-      <h1 style={{ margin: 0, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.5px', lineHeight: '1.6', fontSize: '24px' }}>최근 검색</h1>
+      <h1 style={{ margin: 0, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.5px', lineHeight: '1.6', fontSize: '24px' }}>직주근접</h1>
       <p style={{ fontSize: 14, color: 'var(--ink-3)', fontWeight: 500, lineHeight: '1.6', margin: '0px' }}>조건을 선택하면 최신 시세로 재조회합니다</p>
     </div>
   );
