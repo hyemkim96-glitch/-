@@ -394,8 +394,31 @@ function ResultsKakaoMap({ items, onExpand }) {
 }
 
 // ── 핵심: 후보 지역을 사용자 입력 기반으로 스코어링 ────────────────
+// 두 좌표 간 직선거리(km) 계산
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// 직선거리 기반 출퇴근 시간 추정 (서울 교통 현실 반영)
+function estimateCommute(km, transport) {
+  if (transport === '자가용') {
+    // 서울 자가용: 평균 시속 18km (신호, 정체 반영) + 주차 이동 5분
+    return Math.round(km / 18 * 60 + 5);
+  }
+  // 대중교통: 도보+대기 10분 + 평균 시속 28km
+  return Math.round(km / 28 * 60 + 10);
+}
+
 async function buildResults({ asset, income, transport, workLat, workLng, loan, loanRate }) {
   const results = [];
+  // 서울 시청 좌표: 직장 좌표 없을 때 fallback
+  const wx = workLng || 126.9780;
+  const wy = workLat || 37.5665;
 
   for (const region of CANDIDATE_REGIONS) {
     for (const opt of region.options) {
@@ -409,46 +432,45 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
       const capitalMan = deposit;
 
       // 월 고정비 = 대출이자 + 월세 + 관리비
-      // 대출 필요액: 보증금에서 보유 자산 초과분
       const loanNeeded = Math.max(0, deposit - asset);
       const usedRate = loanRate || 3.5;
       const monthlyInterest = Math.round((loanNeeded * (usedRate / 100)) / 12);
       const monthlyMan = monthlyInterest + rentMan + (region.maintenanceFee || 0);
 
-      // 출퇴근 시간 (API 호출, 실패 시 직선거리 추정)
+      // 출퇴근 시간 — API 우선, 실패 시 직선거리로 직접 계산
       let commuteMin = null;
       let isEstimated = true;
-      if (workLat && workLng && region.coords) {
-        try {
-          const r = await fetch(
-            `/api/commute?ox=${workLng}&oy=${workLat}&dx=${region.coords.lng}&dy=${region.coords.lat}&transport=${encodeURIComponent(transport || '대중교통')}`
-          );
-          const d = await r.json();
-          commuteMin = d.minutes;
-          isEstimated = d.isEstimated;
-        } catch {
-          // 직선거리 fallback은 API에서 처리됨
-        }
-      }
+      try {
+        const r = await fetch(
+          `/api/commute?ox=${wx}&oy=${wy}&dx=${region.coords.lng}&dy=${region.coords.lat}&transport=${encodeURIComponent(transport || '대중교통')}`
+        );
+        const d = await r.json();
+        commuteMin = d.minutes;
+        isEstimated = d.isEstimated;
+      } catch {}
+
       if (commuteMin == null) {
-        // 좌표 없을 경우 기본 추정
-        commuteMin = 30 + Math.floor(Math.random() * 30);
+        const km = haversineKm(wy, wx, region.coords.lat, region.coords.lng);
+        commuteMin = estimateCommute(km, transport);
         isEstimated = true;
       }
 
-      // 생활권 점수 (API 호출)
-      let life = { subway: 0, store: 0, mart: 0, hospital: 0 };
-      if (region.coords) {
-        try {
-          const r = await fetch(`/api/facilities?lat=${region.coords.lat}&lng=${region.coords.lng}`);
-          life = await r.json();
-        } catch {}
-      }
+      // 생활권 — API 우선, 실패/0 시 지역 기본값 사용
+      let life = region.defaultLife;
+      try {
+        const r = await fetch(`/api/facilities?lat=${region.coords.lat}&lng=${region.coords.lng}`);
+        const apiLife = await r.json();
+        // API가 실제 데이터를 줬을 때만 사용 (합계 > 0)
+        const total = Object.values(apiLife).reduce((s, v) => s + v, 0);
+        if (total > 0) life = apiLife;
+      } catch {}
 
-      // 스코어 계산
+      // 스코어 계산 — 지역 평균 시세 기반 가격 점수
+      const avgPrice = opt.type === '전세' ? region.avgJeonsaMan : (region.avgRentMan * 100);
+      const itemPrice = opt.type === '전세' ? deposit : (rentMan * 100);
       const cs = commuteScore(commuteMin);
-      const ps = priceScore(deposit, deposit * 1.05); // TODO: 실거래가 API 연동 시 avgPrice 교체
-      const ls = lifeScore(life, null);
+      const ps = priceScore(itemPrice, avgPrice);
+      const ls = lifeScore(life, CANDIDATE_REGIONS.map((r) => r.defaultLife));
       const score = totalScore(cs, ps, ls);
 
       // 가격 레이블
