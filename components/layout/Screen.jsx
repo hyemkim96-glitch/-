@@ -2,7 +2,7 @@
 
 export function Screen({ header, footer, children, bg }) {
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: bg || 'var(--bg)' }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: bg || 'var(--bg)' }}>
       {header}
       <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {children}

@@ -50,28 +50,35 @@ export default function Step1Page() {
     setFormData(next);
   }
 
+  async function fetchSuggestions(val) {
+    if (!val || val.trim().length < 1) { setSuggestions([]); return; }
+    try {
+      const res = await fetch(`/api/address?q=${encodeURIComponent(val.trim())}`);
+      const data = await res.json();
+      setSuggestions(
+        (data.documents || []).map((d) => ({
+          name: d.place_name || d.address_name,
+          lat: parseFloat(d.y),
+          lng: parseFloat(d.x),
+        }))
+      );
+    } catch {
+      setSuggestions([]);
+    }
+  }
+
   // suggestions: [{ name, lat, lng }]
   function handleWorkChange(val) {
     updateForm({ work: val, workLat: null, workLng: null });
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (val.trim().length >= 2) {
-      debounceRef.current = setTimeout(async () => {
-        try {
-          const res = await fetch(`/api/address?q=${encodeURIComponent(val)}`);
-          const data = await res.json();
-          setSuggestions(
-            (data.documents || []).map((d) => ({
-              name: d.place_name || d.address_name,
-              lat: parseFloat(d.y),
-              lng: parseFloat(d.x),
-            }))
-          );
-        } catch {
-          setSuggestions([]);
-        }
-      }, 300);
-    } else {
-      setSuggestions([]);
+    debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
+  }
+
+  function handleWorkFocus() {
+    setFocus(true);
+    // 포커스 시 현재 입력값으로 즉시 검색
+    if (form.work && form.work.trim().length >= 1) {
+      fetchSuggestions(form.work);
     }
   }
 
@@ -109,7 +116,7 @@ export default function Step1Page() {
                 value={form.work}
                 placeholder="회사 이름 또는 주소 검색"
                 onChange={(e) => handleWorkChange(e.target.value)}
-                onFocus={() => setFocus(true)}
+                onFocus={handleWorkFocus}
                 onBlur={() => setTimeout(() => setFocus(false), 150)}
                 style={{ width: '100%', boxSizing: 'border-box', border: 'none', outline: 'none',
                   background: 'var(--surface)', borderRadius: 14, padding: '15px 16px 15px 46px',

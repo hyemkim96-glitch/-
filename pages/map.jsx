@@ -129,7 +129,7 @@ export default function MapPage() {
   const hasKakaoKey = !!process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
 
   return (
-    <div style={{ height: '100vh', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
       {/* 지도 영역 */}
       {hasKakaoKey ? (
         <KakaoMap

@@ -16,24 +16,33 @@ export default function App({ Component, pageProps }) {
           />
         )}
       </Head>
-      {/* 웹에서 볼 때 모바일 사이즈(430px)로 센터 정렬 */}
+      {/*
+        웹에서 볼 때: 모바일 비율(390×844) 고정 프레임을 뷰포트 중앙에 배치.
+        실제 모바일 기기에서는 100vw×100dvh로 꽉 채움.
+      */}
       <div style={{
-        minHeight: '100vh',
+        width: '100vw',
+        height: '100dvh',
         background: '#DFE3E8',
         display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
-        alignItems: 'flex-start',
+        overflow: 'hidden',
       }}>
         <div style={{
-          width: '100%',
-          maxWidth: 430,
-          minHeight: '100vh',
+          width: 'min(100vw, 390px)',
+          height: 'min(100dvh, 844px)',
           background: 'var(--bg)',
           position: 'relative',
-          boxShadow: '0 0 60px rgba(0,0,0,0.18)',
+          boxShadow: '0 0 60px rgba(0,0,0,0.22)',
           overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }}>
-          <Component {...pageProps} />
+          {/* 자식(페이지)이 컨테이너 전체 높이를 채우도록 */}
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <Component {...pageProps} />
+          </div>
         </div>
       </div>
     </>

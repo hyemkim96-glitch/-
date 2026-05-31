@@ -417,7 +417,7 @@ export default function ResultsPage() {
   // 지도 뷰
   if (viewMode === 'map') {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {header}
         <div style={{ flex: 1, position: 'relative' }}>
           <MapCanvas style={{ position: 'absolute' }}>
@@ -444,7 +444,7 @@ export default function ResultsPage() {
   // 목록 뷰
   return (
     <>
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {header}
         <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {slowWarning && loading && (
