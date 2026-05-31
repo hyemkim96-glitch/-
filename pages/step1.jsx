@@ -48,6 +48,7 @@ export default function Step1Page() {
   const [focus, setFocus] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [isFallback, setIsFallback] = useState(false);
+  const [apiError, setApiError] = useState(null);
   const debounceRef = useRef(null);
   // mousedown 중인지 추적 — blur보다 먼저 발생하므로 dropdown 닫힘 방지
   const selectingRef = useRef(false);
@@ -68,6 +69,7 @@ export default function Step1Page() {
       const data = await res.json();
       const docs = (data.documents || []).filter(Boolean);
       if (docs.length > 0) {
+        setApiError(null);
         setSuggestions(docs.map((d) => ({
           name: d.place_name || d.address_name,
           lat: parseFloat(d.y),
@@ -75,14 +77,15 @@ export default function Step1Page() {
         })));
         setIsFallback(false);
       } else {
-        // API 키 미설정 or 결과 없음 → fallback 예시 표시
+        setApiError(data.error || data.errorType || null);
         const filtered = val && val.trim()
           ? FALLBACK_PLACES.filter((p) => p.name.includes(val.trim()))
           : FALLBACK_PLACES;
         setSuggestions(filtered.length > 0 ? filtered : FALLBACK_PLACES);
         setIsFallback(true);
       }
-    } catch {
+    } catch (e) {
+      setApiError(e.message);
       setSuggestions(FALLBACK_PLACES);
       setIsFallback(true);
     }
@@ -150,7 +153,7 @@ export default function Step1Page() {
               <div style={{ marginTop: 8, background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.1), 0 0 0 1px var(--line)' }}>
                 {isFallback && (
                   <div style={{ padding: '10px 16px 4px', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>
-                    예시 장소 (API 키 설정 시 실검색 가능)
+                    {apiError ? `API 오류: ${apiError}` : '예시 장소 (API 키 설정 시 실검색 가능)'}
                   </div>
                 )}
                 {suggestions.map((s, i) => (
