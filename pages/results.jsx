@@ -292,10 +292,10 @@ function FacilityChip({ icon, label, count }) {
 
 function DetailStat({ icon, label, value, note }) {
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '4px 0' }}>
+    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '4px 8px', textAlign: 'center' }}>
       <span style={{ color: 'var(--ink-3)', display: 'flex' }}>{icon}</span>
-      <span style={{ fontSize: 11.5, color: 'var(--ink-3)', fontWeight: 600 }}>{label}</span>
-      <span style={{ fontSize: 14.5, color: 'var(--ink)', fontWeight: 800, whiteSpace: 'nowrap' }}>{value}</span>
+      <span style={{ fontSize: 11.5, color: 'var(--ink-3)', fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 800, whiteSpace: 'nowrap', letterSpacing: '-0.02em' }}>{value}</span>
       {note && <span style={{ fontSize: 10.5, color: 'var(--ink-3)', fontWeight: 500 }}>{note}</span>}
     </div>
   );
@@ -336,7 +336,7 @@ function ExpandedSheet({ item, onClose }) {
               최근 3개월 평균 시세 <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{item.avgLabel || '—'}</span>
             </div>
           )}
-          <div style={{ marginTop: 18, display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: '14px 6px' }}>
+          <div style={{ marginTop: 18, display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: '14px 0', overflow: 'hidden' }}>
             <DetailStat icon={<IconWallet size={21} />} label="최소 자본금" value={formatKRW(item.capitalMan)} />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
             <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={`${item.monthlyMan}만원`} note="관리비 포함" />
