@@ -193,7 +193,7 @@ function MiniStat({ icon, label, value }) {
 }
 
 // ── ResultCard ────────────────────────────────────────────────────
-function ResultCard({ item, onExpand, myAsset }) {
+function ResultCard({ item, onExpand }) {
   return (
     <div onClick={() => onExpand(item)} style={{ background: 'var(--surface)', borderRadius: 16, padding: 18, cursor: 'pointer', boxShadow: 'var(--card-shadow)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
@@ -210,7 +210,6 @@ function ResultCard({ item, onExpand, myAsset }) {
         <span style={{ fontSize: 17.5, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{item.priceLabel}</span>
       </div>
       <div style={{ marginTop: 15, display: 'flex', gap: 14, flexWrap: 'wrap', rowGap: 8 }}>
-        <MiniStat label="보유 자산" value={formatKRW(myAsset ?? item.capitalMan)} />
         <MiniStat label="월 고정비" value={`${item.monthlyMan}만원`} />
         <MiniStat label="출퇴근" value={item.commuteLabel} />
       </div>
@@ -684,7 +683,7 @@ export default function ResultsPage() {
                     <p style={{ marginTop: 8, fontSize: 14 }}>대출 포함 시 더 많은 결과를 볼 수 있습니다</p>
                   </div>
                 )
-                : filtered.map((item) => <ResultCard key={item.id} item={item} onExpand={setExpanded} myAsset={myAsset} />)
+                : filtered.map((item) => <ResultCard key={item.id} item={item} onExpand={setExpanded} />)
             }
             {!loading && filtered.some((i) => i.commuteLabel.includes('*')) && (
               <p style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', margin: '4px 0 8px' }}>
