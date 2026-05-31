@@ -418,8 +418,10 @@ export default function ResultsPage() {
       setAllResults(results);
       setLoading(false);
 
-      // 히스토리 저장
-      if (f.work && results.length > 0) {
+      // 실제 새 검색(step2 또는 히스토리 재조회)일 때만 히스토리 저장
+      const isNewSearch = sessionStorage.getItem('zipter_new_search') === '1';
+      sessionStorage.removeItem('zipter_new_search');
+      if (isNewSearch && f.work && results.length > 0) {
         addHistory({
           id: `h_${Date.now()}`,
           region: `${results[0].gu} ${results[0].dong}`,

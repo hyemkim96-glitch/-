@@ -30,12 +30,18 @@ export default function Step2Page() {
     setPrefsData(next);
   }
 
+  function goToResults() {
+    // 실제 검색 시작 표시 — results에서 이 플래그가 있을 때만 히스토리 저장
+    sessionStorage.setItem('zipter_new_search', '1');
+    router.push('/results');
+  }
+
   const header = <ProgressHead step={2} onBack={() => router.push('/step1')} />;
   const footer = (
     <Footer>
-      <Button onClick={() => router.push('/results')}>결과 보기</Button>
+      <Button onClick={goToResults}>결과 보기</Button>
       <div style={{ marginTop: 8, textAlign: 'center' }}>
-        <button onClick={() => router.push('/results')}
+        <button onClick={goToResults}
           style={{ background: 'none', border: 'none', fontSize: 14, fontWeight: 600, color: 'var(--ink-3)', cursor: 'pointer', padding: '8px 16px' }}>
           바로 결과 보기 (기본 조건으로)
         </button>

@@ -28,6 +28,7 @@ export default function HistoryPage() {
     setTimeout(() => setToast(false), 2500);
     setFormData({ asset: String(h.asset).replace(/[^\d]/g, ''), income: '', work: h.work });
     setPrefsData({ housing: h.housing === '매매' ? '전월세' : h.housing, homeType: '무관', transport: h.transport });
+    sessionStorage.setItem('zipter_new_search', '1');
     router.push('/results');
   }
 
