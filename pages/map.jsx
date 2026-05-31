@@ -1,5 +1,5 @@
-// pages/map.jsx — 지도 뷰
-import { useState } from 'react';
+// pages/map.jsx — 지도 뷰 (카카오맵 실제 연동, fallback: 가상 캔버스)
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { DEMO_DATA, ScoreBadge, regionLabel, scoreFg } from '../components/shared';
 import { MapCanvas } from '../components/layout/Screen';
@@ -21,6 +21,19 @@ function FilterPill({ label, chevron, active, onClick }) {
   );
 }
 
+function MiniStat({ icon, label, value }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+      {icon && <span style={{ color: 'var(--ink-3)', display: 'flex' }}>{icon}</span>}
+      <span style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}>
+        <span style={{ color: 'var(--ink-3)', fontWeight: 500 }}>{label} </span>
+        <span style={{ color: 'var(--ink-2)', fontWeight: 700 }}>{value}</span>
+      </span>
+    </span>
+  );
+}
+
+// 가상 지도 캔버스 위 핀 (카카오맵 미사용 시 fallback)
 function MapPin({ item, selected, onClick }) {
   const fg = scoreFg(item.score, 'graded');
   return (
@@ -40,32 +53,89 @@ function MapPin({ item, selected, onClick }) {
   );
 }
 
-function MiniStat({ icon, label, value }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-      {icon && <span style={{ color: 'var(--ink-3)', display: 'flex' }}>{icon}</span>}
-      <span style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}>
-        <span style={{ color: 'var(--ink-3)', fontWeight: 500 }}>{label} </span>
-        <span style={{ color: 'var(--ink-2)', fontWeight: 700 }}>{value}</span>
-      </span>
-    </span>
-  );
+// 카카오맵 실제 연동 컴포넌트
+function KakaoMap({ items, selectedId, onSelect }) {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markersRef = useRef([]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    function initMap() {
+      const kakao = window.kakao;
+      if (!kakao?.maps) return;
+
+      kakao.maps.load(() => {
+        const center = new kakao.maps.LatLng(37.5326, 126.9903); // 서울 중심
+        const map = new kakao.maps.Map(containerRef.current, {
+          center,
+          level: 8,
+        });
+        mapRef.current = map;
+
+        // 마커 생성
+        items.forEach((item) => {
+          if (!item.coords) return;
+          const pos = new kakao.maps.LatLng(item.coords.lat, item.coords.lng);
+          const content = `
+            <div style="
+              display:flex;align-items:center;gap:5px;padding:6px 10px;
+              border-radius:999px;white-space:nowrap;
+              background:${item.id === selectedId ? 'var(--accent,#3182F6)' : '#fff'};
+              color:${item.id === selectedId ? '#fff' : '#2A313B'};
+              font-weight:700;font-size:13px;
+              box-shadow:${item.id === selectedId ? '0 8px 20px rgba(49,130,246,0.4)' : '0 3px 10px rgba(0,0,0,0.16)'};
+              font-family:Pretendard,sans-serif;cursor:pointer;
+            ">${item.dong} <span style="font-weight:800">${item.score}</span></div>
+          `;
+          const overlay = new kakao.maps.CustomOverlay({ position: pos, content, yAnchor: 1.3 });
+          overlay.setMap(map);
+          markersRef.current.push({ overlay, item });
+
+          kakao.maps.event.addListener(overlay, 'click', () => onSelect(item));
+        });
+      });
+    }
+
+    if (window.kakao?.maps) {
+      initMap();
+    } else {
+      // SDK 로드 대기
+      const interval = setInterval(() => {
+        if (window.kakao?.maps) { clearInterval(interval); initMap(); }
+      }, 200);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
+  return <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />;
 }
 
 export default function MapPage() {
   const router = useRouter();
   const [sel, setSel] = useState(DEMO_DATA[0].id);
   const selItem = DEMO_DATA.find((d) => d.id === sel);
+  const hasKakaoKey = !!process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
 
   return (
     <div style={{ height: '100vh', position: 'relative', overflow: 'hidden' }}>
-      <MapCanvas style={{ position: 'absolute' }}>
-        {DEMO_DATA.map((item) => (
-          <MapPin key={item.id} item={item} selected={item.id === sel} onClick={(it) => setSel(it.id)} />
-        ))}
-      </MapCanvas>
+      {/* 지도 영역 */}
+      {hasKakaoKey ? (
+        <KakaoMap
+          items={DEMO_DATA}
+          selectedId={sel}
+          onSelect={(item) => setSel(item.id)}
+        />
+      ) : (
+        <MapCanvas style={{ position: 'absolute' }}>
+          {DEMO_DATA.map((item) => (
+            <MapPin key={item.id} item={item} selected={item.id === sel} onClick={(it) => setSel(it.id)} />
+          ))}
+        </MapCanvas>
+      )}
 
-      {/* top filter bar */}
+      {/* 상단 필터바 */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: 52, zIndex: 10 }}>
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 16px 12px', scrollbarWidth: 'none',
           background: 'rgba(242,244,246,0.72)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
@@ -76,7 +146,7 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* selected popup card */}
+      {/* 선택된 지역 카드 */}
       {selItem && (
         <div style={{ position: 'absolute', left: 16, right: 16, bottom: 92, zIndex: 12, animation: 'popIn .2s ease' }}>
           <div onClick={() => router.push('/results')} style={{ background: 'var(--surface)', borderRadius: 16, padding: 16, cursor: 'pointer', boxShadow: '0 12px 30px rgba(0,0,0,0.18)' }}>
@@ -98,7 +168,7 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* bottom list button */}
+      {/* 하단 목록 버튼 */}
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '10px 20px 30px', zIndex: 12 }}>
         <button onClick={() => router.push('/results')} style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
           background: 'var(--surface)', color: 'var(--ink)', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

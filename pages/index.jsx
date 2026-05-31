@@ -9,20 +9,13 @@ import {
   IconHome, IconSearch, IconTrash, IconPlus, IconBuilding, IconWon,
 } from '../components/icons';
 
-const SEED_HISTORY = [
-  { id: 'h1', region: '마포구 합정동', count: 5, work: '강남구 테헤란로', asset: '5000', housing: '전월세', transport: '대중교통', ago: '2일 전' },
-  { id: 'h2', region: '성북구 길음동', count: 4, work: '중구 을지로', asset: '3500', housing: '전월세', transport: '대중교통', ago: '5일 전' },
-  { id: 'h3', region: '광진구 자양동', count: 6, work: '성동구 성수동', asset: '15000', housing: '전월세', transport: '자가용', ago: '2주 전' },
-];
-
 export default function HistoryPage() {
   const router = useRouter();
   const [history, setHistory] = useState([]);
   const [toast, setToast] = useState(false);
 
   useEffect(() => {
-    const saved = getHistory();
-    setHistory(saved.length > 0 ? saved : SEED_HISTORY);
+    setHistory(getHistory());
   }, []);
 
   function handleDelete(id) {

@@ -108,25 +108,118 @@ export function Stat({ icon, label, value, dense }) {
   );
 }
 
-export const DEMO_DATA = [
-  { id: 'hapjeong', gu: '마포구', dong: '합정동', score: 87, type: '전세', price: '1억 8,000만원',
-    capital: '3,000만원', monthly: '42만원', commute: '28분',
-    avg: '1억 7,500만원', status: '적정', statusTone: 'mid',
-    life: { subway: 2, store: 8, mart: 1, hospital: 3 }, pin: { x: 30, y: 36 } },
-  { id: 'dangsan', gu: '영등포구', dong: '당산동', score: 81, type: '전세', price: '1억 6,500만원',
-    capital: '2,800만원', monthly: '38만원', commute: '35분',
-    avg: '1억 6,800만원', status: '저렴', statusTone: 'good',
-    life: { subway: 2, store: 6, mart: 1, hospital: 2 }, pin: { x: 19, y: 57 } },
-  { id: 'sangdo', gu: '동작구', dong: '상도동', score: 74, type: '월세', price: '보증금 5,000 · 월 55만원',
-    capital: '2,000만원', monthly: '61만원', commute: '41분',
-    avg: '월 52만원', status: '다소 높음', statusTone: 'mid',
-    life: { subway: 1, store: 5, mart: 0, hospital: 2 }, pin: { x: 47, y: 66 } },
-  { id: 'sillim', gu: '관악구', dong: '신림동', score: 69, type: '월세', price: '보증금 3,000 · 월 48만원',
-    capital: '1,500만원', monthly: '54만원', commute: '46분',
-    avg: '월 49만원', status: '적정', statusTone: 'mid',
-    life: { subway: 1, store: 7, mart: 1, hospital: 2 }, pin: { x: 38, y: 82 } },
-  { id: 'hyochang', gu: '용산구', dong: '효창동', score: 78, type: '전세', price: '1억 9,500만원',
-    capital: '3,400만원', monthly: '45만원', commute: '22분',
-    avg: '1억 9,000만원', status: '적정', statusTone: 'mid',
-    life: { subway: 3, store: 9, mart: 2, hospital: 4 }, pin: { x: 54, y: 44 } },
+// 후보 지역 데이터 (실거래가 API 연동 전 기준 데이터)
+// coords: 카카오맵/실거래가 API 호출에 사용되는 실제 위경도
+// depositMan: 전세 보증금(만원), rentMan: 월세(만원), depositForRent: 월세 보증금(만원)
+export const CANDIDATE_REGIONS = [
+  {
+    id: 'hapjeong',
+    gu: '마포구', dong: '합정동',
+    coords: { lat: 37.5497, lng: 126.9135 },
+    pin: { x: 30, y: 36 },
+    options: [
+      { type: '전세', depositMan: 18000 },
+      { type: '월세', depositForRent: 3000, rentMan: 65 },
+    ],
+    maintenanceFee: 5,
+  },
+  {
+    id: 'dangsan',
+    gu: '영등포구', dong: '당산동',
+    coords: { lat: 37.5337, lng: 126.9012 },
+    pin: { x: 19, y: 57 },
+    options: [
+      { type: '전세', depositMan: 16500 },
+      { type: '월세', depositForRent: 2000, rentMan: 55 },
+    ],
+    maintenanceFee: 5,
+  },
+  {
+    id: 'sangdo',
+    gu: '동작구', dong: '상도동',
+    coords: { lat: 37.4969, lng: 126.9497 },
+    pin: { x: 47, y: 66 },
+    options: [
+      { type: '전세', depositMan: 14000 },
+      { type: '월세', depositForRent: 2000, rentMan: 55 },
+    ],
+    maintenanceFee: 5,
+  },
+  {
+    id: 'sillim',
+    gu: '관악구', dong: '신림동',
+    coords: { lat: 37.4838, lng: 126.9293 },
+    pin: { x: 38, y: 82 },
+    options: [
+      { type: '전세', depositMan: 12000 },
+      { type: '월세', depositForRent: 1500, rentMan: 48 },
+    ],
+    maintenanceFee: 5,
+  },
+  {
+    id: 'hyochang',
+    gu: '용산구', dong: '효창동',
+    coords: { lat: 37.5407, lng: 126.9607 },
+    pin: { x: 54, y: 44 },
+    options: [
+      { type: '전세', depositMan: 19500 },
+      { type: '월세', depositForRent: 4000, rentMan: 75 },
+    ],
+    maintenanceFee: 5,
+  },
+  {
+    id: 'noryangjin',
+    gu: '동작구', dong: '노량진동',
+    coords: { lat: 37.5135, lng: 126.9426 },
+    pin: { x: 42, y: 72 },
+    options: [
+      { type: '전세', depositMan: 13000 },
+      { type: '월세', depositForRent: 1000, rentMan: 50 },
+    ],
+    maintenanceFee: 5,
+  },
+  {
+    id: 'mapo',
+    gu: '마포구', dong: '마포동',
+    coords: { lat: 37.5443, lng: 126.9517 },
+    pin: { x: 36, y: 42 },
+    options: [
+      { type: '전세', depositMan: 17000 },
+      { type: '월세', depositForRent: 3000, rentMan: 60 },
+    ],
+    maintenanceFee: 5,
+  },
+  {
+    id: 'yeouido',
+    gu: '영등포구', dong: '여의도동',
+    coords: { lat: 37.5219, lng: 126.9244 },
+    pin: { x: 22, y: 62 },
+    options: [
+      { type: '전세', depositMan: 25000 },
+      { type: '월세', depositForRent: 5000, rentMan: 90 },
+    ],
+    maintenanceFee: 10,
+  },
+  {
+    id: 'seongsu',
+    gu: '성동구', dong: '성수동',
+    coords: { lat: 37.5445, lng: 127.0559 },
+    pin: { x: 72, y: 38 },
+    options: [
+      { type: '전세', depositMan: 22000 },
+      { type: '월세', depositForRent: 3000, rentMan: 80 },
+    ],
+    maintenanceFee: 5,
+  },
+  {
+    id: 'eunpyeong',
+    gu: '은평구', dong: '녹번동',
+    coords: { lat: 37.6021, lng: 126.9283 },
+    pin: { x: 28, y: 18 },
+    options: [
+      { type: '전세', depositMan: 11000 },
+      { type: '월세', depositForRent: 1000, rentMan: 42 },
+    ],
+    maintenanceFee: 5,
+  },
 ];

@@ -50,8 +50,9 @@ export default function Step1Page() {
     setFormData(next);
   }
 
+  // suggestions: [{ name, lat, lng }]
   function handleWorkChange(val) {
-    updateForm({ work: val });
+    updateForm({ work: val, workLat: null, workLng: null });
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (val.trim().length >= 2) {
       debounceRef.current = setTimeout(async () => {
@@ -59,7 +60,11 @@ export default function Step1Page() {
           const res = await fetch(`/api/address?q=${encodeURIComponent(val)}`);
           const data = await res.json();
           setSuggestions(
-            (data.documents || []).map((d) => d.place_name || d.address_name)
+            (data.documents || []).map((d) => ({
+              name: d.place_name || d.address_name,
+              lat: parseFloat(d.y),
+              lng: parseFloat(d.x),
+            }))
           );
         } catch {
           setSuggestions([]);
@@ -70,8 +75,13 @@ export default function Step1Page() {
     }
   }
 
-  const fallbackSuggestions = ['강남구 테헤란로 152', '강남구 역삼동 강남파이낸스센터', '서초구 서초대로 396'];
-  const displaySuggestions = suggestions.length > 0 ? suggestions : fallbackSuggestions;
+  function selectSuggestion(s) {
+    updateForm({ work: s.name, workLat: s.lat, workLng: s.lng });
+    setSuggestions([]);
+    setFocus(false);
+  }
+
+  const displaySuggestions = suggestions;
 
   const filled = !!(form.asset && form.income && form.work && form.work.trim());
 
@@ -109,11 +119,11 @@ export default function Step1Page() {
             </div>
             {focus && (
               <div style={{ marginTop: 8, background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.1), 0 0 0 1px var(--line)' }}>
-                {displaySuggestions.map((a, i) => (
-                  <div key={a} onMouseDown={() => { updateForm({ work: a }); setFocus(false); }}
+                {displaySuggestions.map((s, i) => (
+                  <div key={s.name} onMouseDown={() => selectSuggestion(s)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px', cursor: 'pointer', borderTop: i ? '1px solid var(--bg)' : 'none' }}>
                     <span style={{ color: 'var(--ink-3)', display: 'flex' }}><IconPin size={18} /></span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{a}</span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{s.name}</span>
                   </div>
                 ))}
               </div>

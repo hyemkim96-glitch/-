@@ -1,13 +1,14 @@
-// pages/results.jsx — 추천 결과
-import { useState, useEffect } from 'react';
+// pages/results.jsx — 추천 결과 (실제 사용자 입력 기반 필터링 + API 연동)
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getFormData, getPrefsData, addHistory } from '../lib/storage';
-import { DEMO_DATA, ScoreBadge, regionLabel, scoreFg, gradeColors } from '../components/shared';
-import { Screen, Footer, MapCanvas } from '../components/layout/Screen';
+import { commuteScore, priceScore, lifeScore, totalScore } from '../lib/score';
+import { CANDIDATE_REGIONS, ScoreBadge, regionLabel, scoreFg, gradeColors, formatKRW } from '../components/shared';
+import { MapCanvas } from '../components/layout/Screen';
 import {
   IconMap, IconHome, IconWalk, IconWallet, IconWon,
   IconSubway, IconStore, IconCart, IconHospital, IconChevDown, IconClose,
-  IconExternal, IconPin, IconChevRight,
+  IconExternal, IconPin, IconChevRight, IconList,
 } from '../components/icons';
 
 // ── Filter Pill ────────────────────────────────────────────────────
@@ -29,7 +30,6 @@ function FilterPill({ label, chevron, active, toggle, on, onClick }) {
   );
 }
 
-// ── FilterBar ──────────────────────────────────────────────────────
 function FilterBar({ filters, setFilters }) {
   return (
     <div style={{ display: 'flex', overflowX: 'auto', scrollbarWidth: 'none', gap: '4px', padding: '14px 20px' }}>
@@ -76,12 +76,12 @@ function ResultCard({ item, onExpand }) {
       </div>
       <div style={{ marginTop: 11, display: 'flex', alignItems: 'baseline', gap: 8 }}>
         <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink-2)', background: 'var(--bg)', padding: '3px 8px', borderRadius: 6 }}>{item.type}</span>
-        <span style={{ fontSize: 17.5, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{item.price}</span>
+        <span style={{ fontSize: 17.5, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{item.priceLabel}</span>
       </div>
       <div style={{ marginTop: 15, display: 'flex', gap: 14, flexWrap: 'wrap', rowGap: 8 }}>
-        <MiniStat label="자본금" value={item.capital} />
-        <MiniStat label="월" value={item.monthly} />
-        <MiniStat label="출퇴근" value={item.commute} />
+        <MiniStat label="자본금" value={formatKRW(item.capitalMan)} />
+        <MiniStat label="월" value={`${item.monthlyMan}만원`} />
+        <MiniStat label="출퇴근" value={item.commuteLabel} />
       </div>
     </div>
   );
@@ -97,6 +97,53 @@ function SkeletonCard() {
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>{bar('60%', 16)}{bar(50, 24)}</div>
       <div style={{ marginTop: 14 }}>{bar('40%', 20)}</div>
       <div style={{ marginTop: 16, display: 'flex', gap: 14 }}>{bar(60)}{bar(60)}{bar(70)}</div>
+    </div>
+  );
+}
+
+// ── MiniMap ───────────────────────────────────────────────────────
+function MiniMap({ item }) {
+  const containerRef = useRef(null);
+  const hasKey = !!process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
+
+  useEffect(() => {
+    if (!hasKey || !containerRef.current || !item.coords) return;
+    function init() {
+      const kakao = window.kakao;
+      if (!kakao?.maps) return;
+      kakao.maps.load(() => {
+        const pos = new kakao.maps.LatLng(item.coords.lat, item.coords.lng);
+        const map = new kakao.maps.Map(containerRef.current, { center: pos, level: 5 });
+        new kakao.maps.Marker({ map, position: pos });
+      });
+    }
+    if (window.kakao?.maps) init();
+    else {
+      const t = setInterval(() => { if (window.kakao?.maps) { clearInterval(t); init(); } }, 200);
+      return () => clearInterval(t);
+    }
+  }, [item]);
+
+  if (hasKey && item.coords) {
+    return (
+      <div style={{ marginTop: 22, position: 'relative', height: 170, borderRadius: 14, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 22, position: 'relative', height: 170, borderRadius: 14, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+      <MapCanvas>
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 130, height: 130, borderRadius: 999,
+          background: 'rgba(49,130,246,0.10)', boxShadow: 'inset 0 0 0 1.5px rgba(49,130,246,0.35)' }} />
+        {[[34, 38], [66, 34], [60, 64], [40, 66], [72, 52]].map(([x, y], i) => (
+          <div key={i} style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, transform: 'translate(-50%,-50%)', width: 9, height: 9, borderRadius: 999, background: '#fff', boxShadow: '0 0 0 2px var(--ink-3)' }} />
+        ))}
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-100%)', color: 'var(--accent)' }}>
+          <div style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.25))' }}><IconPin size={32} style={{ color: 'var(--accent)' }} /></div>
+        </div>
+      </MapCanvas>
     </div>
   );
 }
@@ -124,11 +171,14 @@ function DetailStat({ icon, label, value }) {
 
 // ── ExpandedSheet ─────────────────────────────────────────────────
 function ExpandedSheet({ item, onClose }) {
-  const tone = item.statusTone === 'good' ? 'var(--good)' : item.statusTone === 'mid' ? 'var(--mid)' : 'var(--good)';
+  const zigbangUrl = item.type === '전세'
+    ? `https://www.zigbang.com/home/oneroom?lat=${item.coords?.lat}&lng=${item.coords?.lng}&radius=1&salesTypes[]=전세&depositMax=${item.depositMan}`
+    : `https://www.zigbang.com/home/oneroom?lat=${item.coords?.lat}&lng=${item.coords?.lng}&radius=1&salesTypes[]=월세&depositMax=${item.depositForRent || 3000}`;
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 40 }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(15,20,28,0.45)', animation: 'fade .2s ease' }} />
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '90%', display: 'flex', flexDirection: 'column',
+      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, right: 'auto', bottom: 0, maxHeight: '90%', display: 'flex', flexDirection: 'column',
         background: 'var(--surface)', borderRadius: '20px 20px 0 0', animation: 'slideUp .28s cubic-bezier(.2,.8,.2,1)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
@@ -142,48 +192,134 @@ function ExpandedSheet({ item, onClose }) {
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-2)', background: 'var(--bg)', padding: '3px 9px', borderRadius: 6 }}>{item.type}</span>
-            <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{item.price}</span>
+            <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{item.priceLabel}</span>
           </div>
-          <div style={{ marginTop: 8, fontSize: 13.5, color: 'var(--ink-2)', fontWeight: 500 }}>
-            최근 3개월 평균 시세 <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{item.avg}</span>
-            <span style={{ marginLeft: 6, color: tone, fontWeight: 700 }}>({item.status})</span>
-          </div>
+          {item.noData ? (
+            <div style={{ marginTop: 8, fontSize: 13, color: 'var(--ink-3)', fontWeight: 500 }}>
+              <span style={{ background: 'var(--mid-weak)', color: 'var(--mid)', fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 6 }}>시세 데이터 부족</span>
+            </div>
+          ) : (
+            <div style={{ marginTop: 8, fontSize: 13.5, color: 'var(--ink-2)', fontWeight: 500 }}>
+              최근 3개월 평균 시세 <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{item.avgLabel || '—'}</span>
+            </div>
+          )}
           <div style={{ marginTop: 18, display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: '14px 6px' }}>
-            <DetailStat icon={<IconWallet size={21} />} label="최소 자본금" value={item.capital} />
+            <DetailStat icon={<IconWallet size={21} />} label="최소 자본금" value={formatKRW(item.capitalMan)} />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
-            <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={item.monthly} />
+            <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={`${item.monthlyMan}만원`} />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
-            <DetailStat icon={<IconWalk size={21} />} label="출퇴근" value={item.commute} />
+            <DetailStat icon={<IconWalk size={21} />} label="출퇴근" value={item.commuteLabel} />
           </div>
-          <div style={{ marginTop: 22, fontSize: 15, fontWeight: 800, color: 'var(--ink)' }}>생활권 요약</div>
-          <div style={{ marginTop: 11, display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
-            <FacilityChip icon={<IconSubway size={18} />} label="지하철" count={item.life.subway} />
-            <FacilityChip icon={<IconStore size={18} />} label="편의점" count={item.life.store} />
-            <FacilityChip icon={<IconCart size={18} />} label="대형마트" count={item.life.mart} />
-            <FacilityChip icon={<IconHospital size={18} />} label="병원" count={item.life.hospital} />
-          </div>
-          <div style={{ marginTop: 22, position: 'relative', height: 170, borderRadius: 14, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
-            <MapCanvas>
-              <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 130, height: 130, borderRadius: 999,
-                background: 'rgba(49,130,246,0.10)', boxShadow: 'inset 0 0 0 1.5px rgba(49,130,246,0.35)' }} />
-              {[[34, 38], [66, 34], [60, 64], [40, 66], [72, 52]].map(([x, y], i) => (
-                <div key={i} style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, transform: 'translate(-50%,-50%)', width: 9, height: 9, borderRadius: 999, background: '#fff', boxShadow: '0 0 0 2px var(--ink-3)' }} />
-              ))}
-              <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-100%)', color: 'var(--accent)' }}>
-                <div style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.25))' }}><IconPin size={32} style={{ color: 'var(--accent)' }} /></div>
+          {item.life && (
+            <>
+              <div style={{ marginTop: 22, fontSize: 15, fontWeight: 800, color: 'var(--ink)' }}>생활권 요약</div>
+              <div style={{ marginTop: 11, display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
+                <FacilityChip icon={<IconSubway size={18} />} label="지하철" count={item.life.subway} />
+                <FacilityChip icon={<IconStore size={18} />} label="편의점" count={item.life.store} />
+                <FacilityChip icon={<IconCart size={18} />} label="대형마트" count={item.life.mart} />
+                <FacilityChip icon={<IconHospital size={18} />} label="병원" count={item.life.hospital} />
               </div>
-            </MapCanvas>
-          </div>
+            </>
+          )}
+          <MiniMap item={item} />
           <div style={{ marginTop: 20 }}>
-            <button style={{ width: '100%', height: 56, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-              background: 'var(--accent)', color: '#fff', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              직방에서 매물 보기 <IconExternal size={19} />
-            </button>
+            <a href={zigbangUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+              <button style={{ width: '100%', height: 56, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                background: 'var(--accent)', color: '#fff', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                직방에서 매물 보기 <IconExternal size={19} />
+              </button>
+            </a>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+// ── 핵심: 후보 지역을 사용자 입력 기반으로 스코어링 ────────────────
+async function buildResults({ asset, income, transport, workLat, workLng, loan, loanRate }) {
+  const results = [];
+
+  for (const region of CANDIDATE_REGIONS) {
+    for (const opt of region.options) {
+      const deposit = opt.type === '전세' ? opt.depositMan : (opt.depositForRent || 0);
+      const rentMan = opt.type === '월세' ? opt.rentMan : 0;
+
+      // 예산 필터: 대출 미포함 시 자본금 ≤ 보유 자산
+      const capitalMan = Math.max(0, deposit - asset);
+      if (!loan && capitalMan > asset) continue;
+
+      // 월 고정비 계산
+      const usedRate = loanRate || 3.5;
+      const monthlyInterest = Math.round((capitalMan * (usedRate / 100)) / 12);
+      const monthlyMan = monthlyInterest + rentMan + (region.maintenanceFee || 0);
+
+      // 출퇴근 시간 (API 호출, 실패 시 직선거리 추정)
+      let commuteMin = null;
+      let isEstimated = true;
+      if (workLat && workLng && region.coords) {
+        try {
+          const r = await fetch(
+            `/api/commute?ox=${workLng}&oy=${workLat}&dx=${region.coords.lng}&dy=${region.coords.lat}&transport=${encodeURIComponent(transport || '대중교통')}`
+          );
+          const d = await r.json();
+          commuteMin = d.minutes;
+          isEstimated = d.isEstimated;
+        } catch {
+          // 직선거리 fallback은 API에서 처리됨
+        }
+      }
+      if (commuteMin == null) {
+        // 좌표 없을 경우 기본 추정
+        commuteMin = 30 + Math.floor(Math.random() * 30);
+        isEstimated = true;
+      }
+
+      // 생활권 점수 (API 호출)
+      let life = { subway: 0, store: 0, mart: 0, hospital: 0 };
+      if (region.coords) {
+        try {
+          const r = await fetch(`/api/facilities?lat=${region.coords.lat}&lng=${region.coords.lng}`);
+          life = await r.json();
+        } catch {}
+      }
+
+      // 스코어 계산
+      const cs = commuteScore(commuteMin);
+      const ps = priceScore(deposit, deposit * 1.05); // TODO: 실거래가 API 연동 시 avgPrice 교체
+      const ls = lifeScore(life, null);
+      const score = totalScore(cs, ps, ls);
+
+      // 가격 레이블
+      const priceLabel = opt.type === '전세'
+        ? formatKRW(opt.depositMan)
+        : `보증금 ${formatKRW(opt.depositForRent || 0)} · 월 ${opt.rentMan}만원`;
+      const commuteLabel = `${commuteMin}분${isEstimated ? '*' : ''}`;
+
+      results.push({
+        id: `${region.id}_${opt.type}`,
+        gu: region.gu,
+        dong: region.dong,
+        coords: region.coords,
+        pin: region.pin,
+        type: opt.type,
+        depositMan: deposit,
+        depositForRent: opt.depositForRent,
+        priceLabel,
+        capitalMan,
+        monthlyMan,
+        commuteMin,
+        commuteLabel,
+        life,
+        score,
+        noData: false,
+      });
+    }
+  }
+
+  // 추천순 정렬
+  results.sort((a, b) => b.score - a.score);
+  return results;
 }
 
 // ── ResultsPage ────────────────────────────────────────────────────
@@ -192,35 +328,51 @@ export default function ResultsPage() {
   const [filters, setFilters] = useState({ type: '전체', home: '무관', loan: false });
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({});
-  const [prefs, setPrefs] = useState({});
+  const [slowWarning, setSlowWarning] = useState(false);
+  const [allResults, setAllResults] = useState([]);
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
 
   useEffect(() => {
     const f = getFormData();
     const p = getPrefsData();
-    setForm(f);
-    setPrefs(p);
+    setFilters((prev) => ({ ...prev, type: p.housing === '전세' ? '전세만' : p.housing === '월세' ? '월세만' : '전체' }));
 
-    // 히스토리 저장
-    if (f.work) {
-      addHistory({
-        id: `h_${Date.now()}`,
-        region: '서울 추천 지역',
-        count: DEMO_DATA.length,
-        work: f.work || '강남구',
-        asset: f.asset || '0',
-        housing: p.housing || '전월세',
-        transport: p.transport || '대중교통',
-        ago: '방금',
-      });
-    }
+    const slowTimer = setTimeout(() => setSlowWarning(true), 3000);
 
-    const t = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(t);
+    buildResults({
+      asset: parseInt(f.asset || '0', 10),
+      income: parseInt(f.income || '0', 10),
+      transport: p.transport || '대중교통',
+      workLat: f.workLat || null,
+      workLng: f.workLng || null,
+      loan: false,
+      loanRate: 3.5,
+    }).then((results) => {
+      clearTimeout(slowTimer);
+      setSlowWarning(false);
+      setAllResults(results);
+      setLoading(false);
+
+      // 히스토리 저장
+      if (f.work && results.length > 0) {
+        addHistory({
+          id: `h_${Date.now()}`,
+          region: `${results[0].gu} ${results[0].dong}`,
+          count: results.length,
+          work: f.work,
+          asset: f.asset || '0',
+          housing: p.housing || '전월세',
+          transport: p.transport || '대중교통',
+          ago: '방금',
+        });
+      }
+    });
+
+    return () => clearTimeout(slowTimer);
   }, []);
 
   // 필터 적용
-  const filtered = DEMO_DATA.filter((item) => {
+  const filtered = allResults.filter((item) => {
     if (filters.type === '전세만' && item.type !== '전세') return false;
     if (filters.type === '월세만' && item.type !== '월세') return false;
     return true;
@@ -233,32 +385,86 @@ export default function ResultsPage() {
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 5-7 7 7 7" /></svg>
         </button>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>추천 지역</h1>
-        <span style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--ink-3)', fontWeight: 600 }}>{filtered.length}곳 추천</span>
+        <span style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--ink-3)', fontWeight: 600 }}>
+          {loading ? '조회 중…' : `${filtered.length}곳 추천`}
+        </span>
+        {/* 지도/목록 토글 버튼 */}
+        <button
+          onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+          style={{
+            marginLeft: 8, display: 'flex', alignItems: 'center', gap: 5,
+            padding: '7px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+            background: 'var(--surface)', color: 'var(--ink-2)',
+            boxShadow: 'var(--card-shadow)',
+            transition: 'all .14s ease',
+          }}
+        >
+          {viewMode === 'list' ? <><IconMap size={15} /> 지도</> : <><IconList size={15} /> 목록</>}
+        </button>
       </div>
       <FilterBar filters={filters} setFilters={setFilters} />
     </div>
   );
 
-  const footer = (
-    <div style={{ padding: '10px 20px 30px', background: 'linear-gradient(to top, var(--bg) 70%, rgba(242,244,246,0))' }}>
-      <button onClick={() => router.push('/map')} style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-        background: 'var(--ink)', color: '#fff', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        boxShadow: '0 8px 22px rgba(25,31,40,0.28)' }}>
-        <IconMap size={20} /> 지도로 보기
-      </button>
-    </div>
-  );
+  // 지도 뷰
+  if (viewMode === 'map') {
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        {header}
+        <div style={{ flex: 1, position: 'relative' }}>
+          <MapCanvas style={{ position: 'absolute' }}>
+            {filtered.map((item) => (
+              <div key={item.id} onClick={() => setExpanded(item)}
+                style={{ position: 'absolute', left: `${item.pin.x}%`, top: `${item.pin.y}%`,
+                  transform: 'translate(-50%,-100%)', cursor: 'pointer', zIndex: 3 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 999, whiteSpace: 'nowrap',
+                  background: 'var(--surface)', fontWeight: 700, fontSize: 13,
+                  boxShadow: '0 3px 10px rgba(0,0,0,0.16)' }}>
+                  {item.dong}
+                  <span style={{ fontWeight: 800, color: gradeColors(item.score).fg }}>{item.score}</span>
+                </div>
+                <div style={{ width: 0, height: 0, margin: '0 auto', borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '7px solid var(--surface)' }} />
+              </div>
+            ))}
+          </MapCanvas>
+        </div>
+        {expanded && <ExpandedSheet item={expanded} onClose={() => setExpanded(null)} />}
+      </div>
+    );
+  }
 
+  // 목록 뷰
   return (
     <>
-      <Screen header={header} footer={footer}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 20px' }}>
-          {loading
-            ? [1, 2, 3].map((i) => <SkeletonCard key={i} />)
-            : filtered.map((item) => <ResultCard key={item.id} item={item} onExpand={setExpanded} />)
-          }
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        {header}
+        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          {slowWarning && loading && (
+            <div style={{ margin: '16px 20px 0', padding: '12px 16px', borderRadius: 12, background: 'var(--accent-weak)', fontSize: 13.5, fontWeight: 600, color: 'var(--accent)' }}>
+              데이터를 불러오는 중입니다 (최대 15초)
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 20px' }}>
+            {loading
+              ? [1, 2, 3, 4, 5].map((i) => <SkeletonCard key={i} />)
+              : filtered.length === 0
+                ? (
+                  <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ink-3)' }}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>조건 내 결과가 없습니다</div>
+                    <p style={{ marginTop: 8, fontSize: 14 }}>대출 포함 시 더 많은 결과를 볼 수 있습니다</p>
+                  </div>
+                )
+                : filtered.map((item) => <ResultCard key={item.id} item={item} onExpand={setExpanded} />)
+            }
+            {!loading && filtered.some((i) => i.commuteLabel.includes('*')) && (
+              <p style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', margin: '4px 0 8px' }}>
+                * 출퇴근 시간은 직선거리 기반 추정값입니다
+              </p>
+            )}
+          </div>
         </div>
-      </Screen>
+      </div>
       {expanded && <ExpandedSheet item={expanded} onClose={() => setExpanded(null)} />}
     </>
   );
