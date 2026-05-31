@@ -487,11 +487,16 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
       // 출퇴근 90분 초과 지역 제외
       if (commuteMin > 90) continue;
 
-      // 스코어 계산 — 지역 평균 시세 기반 가격 점수
-      const avgPrice = opt.type === '전세' ? region.avgJeonsaMan : (region.avgRentMan * 100);
-      const itemPrice = opt.type === '전세' ? deposit : (rentMan * 100);
+      // 스코어 계산 — 월 고정비/소득 비율 기반 가격 점수 (소득 없으면 평균 시세 상대값 fallback)
       const cs = commuteScore(commuteMin);
-      const ps = priceScore(itemPrice, avgPrice);
+      let ps;
+      if (income > 0) {
+        ps = priceScore(monthlyMan, income * 0.4); // 소득의 40%를 기준점으로
+      } else {
+        const avgPrice = opt.type === '전세' ? region.avgJeonsaMan : (region.avgRentMan * 100);
+        const itemPrice = opt.type === '전세' ? deposit : (rentMan * 100);
+        ps = priceScore(itemPrice, avgPrice);
+      }
       const ls = lifeScore(life, CANDIDATE_REGIONS.map((r) => r.defaultLife));
       const score = totalScore(cs, ps, ls);
 
