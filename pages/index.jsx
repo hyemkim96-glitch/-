@@ -85,7 +85,10 @@ export default function HistoryPage() {
                     <span style={{ color: 'var(--ink-3)', display: 'flex' }}><IconBuilding size={14} /></span>{h.work.split(' ')[0]}
                   </span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', background: 'var(--bg)', padding: '6px 11px 6px 9px', borderRadius: 999 }}>
-                    <span style={{ color: 'var(--ink-3)', display: 'flex' }}><IconWon size={14} /></span>{formatKRW(h.asset)}
+                    <span style={{ color: 'var(--ink-3)', display: 'flex' }}><IconWon size={14} /></span>
+                    {h.depositMan
+                      ? `${h.depositMan.toLocaleString()} / ${h.monthlyMan}만원`
+                      : formatKRW(h.asset)}
                   </span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', background: 'var(--bg)', padding: '6px 11px', borderRadius: 999 }}>{h.housing}</span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', background: 'var(--bg)', padding: '6px 11px', borderRadius: 999 }}>{h.transport}</span>

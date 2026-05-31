@@ -562,6 +562,8 @@ export default function ResultsPage() {
           count: results.length,
           work: f.work,
           asset: f.asset || '0',
+          depositMan: results[0].depositMan,
+          monthlyMan: results[0].monthlyMan,
           housing: p.housing || '전월세',
           transport: p.transport || '대중교통',
           ago: '방금',
