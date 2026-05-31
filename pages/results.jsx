@@ -228,12 +228,12 @@ function MiniMap({ item }) {
       if (!kakao?.maps) return;
       kakao.maps.load(() => {
         const pos = new kakao.maps.LatLng(item.coords.lat, item.coords.lng);
-        const map = new kakao.maps.Map(containerRef.current, { center: pos, level: 6 });
+        const map = new kakao.maps.Map(containerRef.current, { center: pos, level: 4 });
         // 핀 대신 반경 원으로 표시 (특정 주소가 아닌 동네 범위임을 명확히)
         new kakao.maps.Circle({
           map,
           center: pos,
-          radius: 700,
+          radius: 400,
           strokeWeight: 2,
           strokeColor: '#3182F6',
           strokeOpacity: 0.7,
