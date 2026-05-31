@@ -100,9 +100,9 @@ export default function Step1Page() {
   }
 
   function handleWorkBlur() {
-    // selectingRef가 true면 (드롭다운 항목 클릭 중) blur 무시
+    // selectingRef가 true면 (드롭다운 항목 클릭/터치 중) blur 무시
     if (selectingRef.current) return;
-    setTimeout(() => setFocus(false), 100);
+    setTimeout(() => setFocus(false), 200);
   }
 
   function selectSuggestion(s) {
@@ -156,8 +156,10 @@ export default function Step1Page() {
                 {suggestions.map((s, i) => (
                   <div
                     key={s.name}
-                    onMouseDown={() => { selectingRef.current = true; }}
-                    onMouseUp={() => selectSuggestion(s)}
+                    onMouseDown={(e) => { e.preventDefault(); selectingRef.current = true; }}
+                    onMouseUp={(e) => { e.preventDefault(); selectSuggestion(s); }}
+                    onTouchStart={() => { selectingRef.current = true; }}
+                    onTouchEnd={(e) => { e.preventDefault(); selectSuggestion(s); }}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px', cursor: 'pointer',
                       borderTop: i ? '1px solid var(--bg)' : 'none' }}
                   >
