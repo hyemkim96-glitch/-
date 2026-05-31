@@ -484,6 +484,9 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
         if (total > 0) life = apiLife;
       } catch {}
 
+      // 출퇴근 90분 초과 지역 제외
+      if (commuteMin > 90) continue;
+
       // 스코어 계산 — 지역 평균 시세 기반 가격 점수
       const avgPrice = opt.type === '전세' ? region.avgJeonsaMan : (region.avgRentMan * 100);
       const itemPrice = opt.type === '전세' ? deposit : (rentMan * 100);

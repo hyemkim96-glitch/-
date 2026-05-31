@@ -114,6 +114,7 @@ export function Stat({ icon, label, value, dense }) {
 // avgJeonsaMan: 원룸 기준 전세 시세 평균 (만원), avgRentMan: 월세 평균
 // defaultLife: 카카오 API 없을 때 사용할 기본 생활권 데이터 (반경 1km 기준 실측치)
 export const CANDIDATE_REGIONS = [
+  // ── 서울 ──────────────────────────────────────────────────────────
   {
     id: 'hapjeong', gu: '마포구', dong: '합정동',
     coords: { lat: 37.5497, lng: 126.9135 }, pin: { x: 30, y: 36 },
@@ -223,5 +224,86 @@ export const CANDIDATE_REGIONS = [
     maintenanceFee: 5,
     avgJeonsaMan: 10500, avgRentMan: 41,
     defaultLife: { subway: 1, store: 6, mart: 1, hospital: 4 },
+  },
+
+  // ── 경기 남부 (수원·안양·성남 직장 대응) ─────────────────────────
+  {
+    id: 'suwon_ingye', gu: '수원시 팔달구', dong: '인계동',
+    coords: { lat: 37.2636, lng: 127.0286 }, pin: { x: 55, y: 95 },
+    options: [
+      { type: '전세', depositMan: 8000 },
+      { type: '월세', depositForRent: 500, rentMan: 35 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 8000, avgRentMan: 35,
+    defaultLife: { subway: 1, store: 8, mart: 2, hospital: 5 },
+  },
+  {
+    id: 'suwon_youngtong', gu: '수원시 영통구', dong: '영통동',
+    coords: { lat: 37.2512, lng: 127.0718 }, pin: { x: 62, y: 97 },
+    options: [
+      { type: '전세', depositMan: 10000 },
+      { type: '월세', depositForRent: 1000, rentMan: 40 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 10000, avgRentMan: 40,
+    defaultLife: { subway: 2, store: 9, mart: 2, hospital: 5 },
+  },
+  {
+    id: 'anyang_dongan', gu: '안양시 동안구', dong: '평촌동',
+    coords: { lat: 37.3939, lng: 126.9528 }, pin: { x: 44, y: 88 },
+    options: [
+      { type: '전세', depositMan: 11000 },
+      { type: '월세', depositForRent: 1000, rentMan: 42 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 11000, avgRentMan: 42,
+    defaultLife: { subway: 2, store: 7, mart: 2, hospital: 4 },
+  },
+  {
+    id: 'seongnam_bundang', gu: '성남시 분당구', dong: '서현동',
+    coords: { lat: 37.3836, lng: 127.1218 }, pin: { x: 74, y: 90 },
+    options: [
+      { type: '전세', depositMan: 15000 },
+      { type: '월세', depositForRent: 2000, rentMan: 55 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 15000, avgRentMan: 55,
+    defaultLife: { subway: 2, store: 8, mart: 2, hospital: 5 },
+  },
+  {
+    id: 'gwacheon', gu: '과천시', dong: '별양동',
+    coords: { lat: 37.4290, lng: 126.9878 }, pin: { x: 50, y: 85 },
+    options: [
+      { type: '전세', depositMan: 13000 },
+      { type: '월세', depositForRent: 1500, rentMan: 48 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 13000, avgRentMan: 48,
+    defaultLife: { subway: 1, store: 5, mart: 1, hospital: 3 },
+  },
+
+  // ── 경기 동부·북부 (판교·분당·일산 직장 대응) ────────────────────
+  {
+    id: 'pangyo', gu: '성남시 분당구', dong: '판교동',
+    coords: { lat: 37.3943, lng: 127.1111 }, pin: { x: 71, y: 88 },
+    options: [
+      { type: '전세', depositMan: 18000 },
+      { type: '월세', depositForRent: 2500, rentMan: 65 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 18000, avgRentMan: 65,
+    defaultLife: { subway: 1, store: 7, mart: 1, hospital: 4 },
+  },
+  {
+    id: 'yongin_giheung', gu: '용인시 기흥구', dong: '영덕동',
+    coords: { lat: 37.2748, lng: 127.1151 }, pin: { x: 68, y: 93 },
+    options: [
+      { type: '전세', depositMan: 9000 },
+      { type: '월세', depositForRent: 500, rentMan: 38 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 9000, avgRentMan: 38,
+    defaultLife: { subway: 1, store: 6, mart: 1, hospital: 3 },
   },
 ];
