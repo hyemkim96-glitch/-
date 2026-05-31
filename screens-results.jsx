@@ -196,7 +196,7 @@ function ExpandedSheet({ item, onClose }) {
               )}
               {/* center pin */}
               <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-100%)', color: 'var(--accent)' }}>
-                <div style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.25))' }}><IconPin size={32} style={{ fill: 'var(--accent)', color: '#fff' }} /></div>
+                <div style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.25))' }}><IconPin size={32} style={{ color: 'var(--accent)' }} /></div>
               </div>
             </MapCanvas>
           </div>
