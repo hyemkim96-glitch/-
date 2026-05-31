@@ -5,18 +5,9 @@ import { getFormData, setFormData, getPrefsData, setPrefsData } from '../lib/sto
 import { formatKRW, Chip } from '../components/shared';
 import { Button } from '../components/shared';
 import { Screen, Footer, ProgressHead } from '../components/layout/Screen';
-import { IconSearch, IconPin } from '../components/icons';
+import { IconSearch, IconPin, IconClose, IconChevRight } from '../components/icons';
 
 const addCommas = (s) => s.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-// API 키 없을 때 보여줄 예시 장소
-const FALLBACK_PLACES = [
-  { name: '강남구 테헤란로 (역삼역)', lat: 37.5001, lng: 127.0365 },
-  { name: '판교 카카오 아지트', lat: 37.3995, lng: 127.1077 },
-  { name: '여의도 IFC 서울', lat: 37.5252, lng: 126.9244 },
-  { name: '마포구 공덕역', lat: 37.5448, lng: 126.9517 },
-  { name: '성동구 성수동', lat: 37.5445, lng: 127.0559 },
-];
 
 function MoneyField({ label, placeholder, value, onChange }) {
   const formatted = addCommas(value);
@@ -51,18 +42,119 @@ function OptionGroup({ title, children }) {
   );
 }
 
+// ── 직장 검색 전체화면 모달 ──────────────────────────────────────────
+function WorkSearchModal({ onSelect, onClose }) {
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    setTimeout(() => inputRef.current?.focus(), 80);
+  }, []);
+
+  async function fetchSuggestions(val) {
+    if (!val || !val.trim()) { setSuggestions([]); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/address?q=${encodeURIComponent(val.trim())}`);
+      const data = await res.json();
+      const docs = (data.documents || []).filter(Boolean);
+      setSuggestions(docs.length > 0
+        ? docs.map((d) => ({
+            name: d.place_name || d.address_name,
+            address: d.place_name ? d.address_name : null,
+            category: d.category_name ? d.category_name.split('>').pop().trim() : null,
+            lat: parseFloat(d.y),
+            lng: parseFloat(d.x),
+          }))
+        : [{ noResult: true }]
+      );
+    } catch {
+      setSuggestions([{ noResult: true }]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleChange(val) {
+    setQuery(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+      {/* 헤더 */}
+      <div style={{ paddingTop: 50, padding: '50px 16px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-3)', display: 'flex' }}>
+              <IconSearch size={20} />
+            </span>
+            <input
+              ref={inputRef}
+              value={query}
+              placeholder="회사 이름 또는 주소 검색"
+              onChange={(e) => handleChange(e.target.value)}
+              style={{ width: '100%', boxSizing: 'border-box', border: 'none', outline: 'none',
+                background: 'var(--surface)', borderRadius: 14, padding: '15px 16px 15px 44px',
+                fontSize: 16, fontWeight: 600, color: 'var(--ink)', fontFamily: 'inherit',
+                boxShadow: 'inset 0 0 0 1.5px var(--accent)' }}
+            />
+            {query.length > 0 && (
+              <button onClick={() => { setQuery(''); setSuggestions([]); inputRef.current?.focus(); }}
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--ink-3)', display: 'flex' }}>
+                <IconClose size={16} />
+              </button>
+            )}
+          </div>
+          <button onClick={onClose}
+            style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 700, color: 'var(--ink-2)', padding: '8px 4px' }}>
+            취소
+          </button>
+        </div>
+      </div>
+
+      {/* 결과 목록 */}
+      <div style={{ flex: 1, overflowY: 'auto', marginTop: 12 }}>
+        {loading && (
+          <div style={{ padding: '20px', textAlign: 'center', fontSize: 14, color: 'var(--ink-3)' }}>검색 중...</div>
+        )}
+        {!loading && suggestions[0]?.noResult && (
+          <div style={{ padding: '40px 20px', textAlign: 'center', fontSize: 15, fontWeight: 600, color: 'var(--ink-3)' }}>
+            검색 결과가 없습니다.
+          </div>
+        )}
+        {!loading && !suggestions[0]?.noResult && suggestions.map((s, i) => (
+          <div
+            key={s.name + i}
+            onClick={() => onSelect(s)}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', cursor: 'pointer',
+              borderBottom: '1px solid var(--line)', background: 'var(--bg)' }}
+          >
+            <span style={{ color: 'var(--accent)', display: 'flex', flexShrink: 0 }}><IconPin size={20} /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                {s.category && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-weak)', padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap', flexShrink: 0 }}>{s.category}</span>}
+              </div>
+              {s.address && <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.address}</div>}
+            </div>
+            <span style={{ color: 'var(--ink-3)', display: 'flex', flexShrink: 0 }}><IconChevRight size={16} /></span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Step1Page() {
   const router = useRouter();
   const [form, setFormLocal] = useState({ asset: '', income: '', work: '' });
   const [prefs, setPrefsLocal] = useState({ housing: '전월세', transport: '대중교통' });
-  const [focus, setFocus] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
-  const [isFallback, setIsFallback] = useState(false);
-  const [apiError, setApiError] = useState(null);
-  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
-  const debounceRef = useRef(null);
-  const inputRef = useRef(null);
-  const selectingRef = useRef(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     setFormLocal(getFormData());
@@ -81,64 +173,9 @@ export default function Step1Page() {
     setPrefsData(next);
   }
 
-  async function fetchSuggestions(val) {
-    if (!val || !val.trim()) {
-      setSuggestions([]);
-      return;
-    }
-    try {
-      const res = await fetch(`/api/address?q=${encodeURIComponent(val.trim())}`);
-      const data = await res.json();
-      const docs = (data.documents || []).filter(Boolean);
-      if (docs.length > 0) {
-        setSuggestions(docs.map((d) => ({
-          name: d.place_name || d.address_name,
-          address: d.place_name ? d.address_name : null,
-          category: d.category_name ? d.category_name.split('>').pop().trim() : null,
-          lat: parseFloat(d.y),
-          lng: parseFloat(d.x),
-        })));
-        setIsFallback(false);
-      } else {
-        setSuggestions([{ noResult: true }]);
-        setIsFallback(false);
-      }
-    } catch {
-      setSuggestions([{ noResult: true }]);
-      setIsFallback(false);
-    }
-  }
-
-  function handleWorkChange(val) {
-    updateForm({ work: val, workLat: null, workLng: null });
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!val || !val.trim()) {
-      setSuggestions([]);
-      return;
-    }
-    debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
-  }
-
-  function handleWorkFocus() {
-    if (inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      setDropPos({ top: rect.bottom + 6, left: rect.left, width: rect.width });
-    }
-    setFocus(true);
-    if (form.work && form.work.trim() && !form.workLat) fetchSuggestions(form.work);
-  }
-
-  function handleWorkBlur() {
-    // selectingRef가 true면 (드롭다운 항목 클릭/터치 중) blur 무시
-    if (selectingRef.current) return;
-    setTimeout(() => setFocus(false), 200);
-  }
-
-  function selectSuggestion(s) {
-    selectingRef.current = false;
+  function handleSelect(s) {
     updateForm({ work: s.name, workLat: s.lat, workLng: s.lng });
-    setSuggestions([]);
-    setFocus(false);
+    setSearchOpen(false);
   }
 
   const filled = !!(form.asset && form.income && form.work && form.work.trim() && form.workLat && form.workLng);
@@ -156,67 +193,47 @@ export default function Step1Page() {
   );
 
   return (
-    <Screen header={header} footer={footer}>
-      <div style={{ padding: '22px 20px 8px' }}>
-        <h1 style={{ margin: '0 0 24px', fontSize: 24, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>기본 정보를 입력해주세요</h1>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-          <OptionGroup title="주거 형태">
-            <Chip label="전월세" selected={prefs.housing === '전월세'} onClick={() => updatePrefs({ housing: '전월세' })} />
-            <Chip label="전세만" selected={prefs.housing === '전세'} onClick={() => updatePrefs({ housing: '전세' })} />
-            <Chip label="월세만" selected={prefs.housing === '월세'} onClick={() => updatePrefs({ housing: '월세' })} />
-          </OptionGroup>
-          <MoneyField label="보유 자산" placeholder="예: 5,000" value={form.asset} onChange={(v) => updateForm({ asset: v })} />
-          <MoneyField label="월 소득 (세후)" placeholder="예: 320" value={form.income} onChange={(v) => updateForm({ income: v })} />
-          <div>
-            <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-2)' }}>직장 주소</label>
-            <div style={{ marginTop: 9, position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-3)', display: 'flex' }}>
-                <IconSearch size={20} />
-              </span>
-              <input
-                ref={inputRef}
-                value={form.work}
-                placeholder="회사 이름 또는 주소 검색"
-                onChange={(e) => handleWorkChange(e.target.value)}
-                onFocus={handleWorkFocus}
-                onBlur={handleWorkBlur}
-                style={{ width: '100%', boxSizing: 'border-box', border: 'none', outline: 'none',
-                  background: 'var(--surface)', borderRadius: 14, padding: '15px 16px 15px 46px',
-                  fontSize: 16, fontWeight: 600, color: 'var(--ink)', fontFamily: 'inherit',
-                  boxShadow: `inset 0 0 0 1.5px ${focus ? 'var(--accent)' : 'var(--line)'}` }}
-              />
-            </div>
-            {focus && suggestions.length > 0 && (
-              <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 100, background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.14), 0 0 0 1px var(--line)' }}>
-                {suggestions[0]?.noResult ? (
-                  <div style={{ padding: '16px', fontSize: 14, fontWeight: 600, color: 'var(--ink-3)', textAlign: 'center' }}>
-                    검색 결과가 없습니다.
-                  </div>
-                ) : suggestions.map((s, i) => (
-                  <div
-                    key={s.name}
-                    onMouseDown={(e) => { e.preventDefault(); selectingRef.current = true; }}
-                    onMouseUp={(e) => { e.preventDefault(); selectSuggestion(s); }}
-                    onTouchStart={() => { selectingRef.current = true; }}
-                    onTouchEnd={(e) => { e.preventDefault(); selectSuggestion(s); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px', cursor: 'pointer',
-                      borderTop: i ? '1px solid var(--bg)' : 'none' }}
-                  >
-                    <span style={{ color: 'var(--ink-3)', display: 'flex', flexShrink: 0 }}><IconPin size={18} /></span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
-                        {s.category && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-weak)', padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap', flexShrink: 0 }}>{s.category}</span>}
-                      </div>
-                      {s.address && <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.address}</span>}
-                    </div>
-                  </div>
-                ))}
+    <>
+      <Screen header={header} footer={footer}>
+        <div style={{ padding: '22px 20px 8px' }}>
+          <h1 style={{ margin: '0 0 24px', fontSize: 24, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>기본 정보를 입력해주세요</h1>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+            <OptionGroup title="주거 형태">
+              <Chip label="전월세" selected={prefs.housing === '전월세'} onClick={() => updatePrefs({ housing: '전월세' })} />
+              <Chip label="전세만" selected={prefs.housing === '전세'} onClick={() => updatePrefs({ housing: '전세' })} />
+              <Chip label="월세만" selected={prefs.housing === '월세'} onClick={() => updatePrefs({ housing: '월세' })} />
+            </OptionGroup>
+            <MoneyField label="보유 자산" placeholder="예: 5,000" value={form.asset} onChange={(v) => updateForm({ asset: v })} />
+            <MoneyField label="월 소득 (세후)" placeholder="예: 320" value={form.income} onChange={(v) => updateForm({ income: v })} />
+            <div>
+              <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-2)' }}>직장 주소</label>
+              <div style={{ marginTop: 9 }}
+                onClick={() => setSearchOpen(true)}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', borderRadius: 14,
+                  padding: '15px 16px', cursor: 'pointer', boxShadow: 'inset 0 0 0 1.5px var(--line)' }}>
+                  <span style={{ color: 'var(--ink-3)', display: 'flex', flexShrink: 0 }}><IconSearch size={20} /></span>
+                  {form.work
+                    ? <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', flex: 1 }}>{form.work}</span>
+                    : <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink-3)', flex: 1 }}>회사 이름 또는 주소 검색</span>
+                  }
+                  {form.work && (
+                    <button onClick={(e) => { e.stopPropagation(); updateForm({ work: '', workLat: null, workLng: null }); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--ink-3)', display: 'flex' }}>
+                      <IconClose size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
-      </div>
-    </Screen>
+      </Screen>
+      {searchOpen && (
+        <WorkSearchModal
+          onSelect={handleSelect}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
+    </>
   );
 }
