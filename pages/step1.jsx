@@ -99,7 +99,7 @@ export default function Step1Page() {
 
   function handleWorkFocus() {
     setFocus(true);
-    fetchSuggestions(form.work);
+    if (form.work && form.work.trim()) fetchSuggestions(form.work);
   }
 
   function handleWorkBlur() {
