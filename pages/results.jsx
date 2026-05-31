@@ -14,21 +14,33 @@ import {
 // ── DropdownPill: 클릭 시 드롭다운 펼치는 필터 칩 ─────────────────
 function DropdownPill({ label, active, options, value, onChange }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef(null);
   const ref = useRef(null);
 
   useEffect(() => {
     if (!open) return;
     function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target) &&
+          btnRef.current && !btnRef.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  function handleOpen() {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 6, left: rect.left });
+    }
+    setOpen((o) => !o);
+  }
+
   return (
-    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+    <div style={{ position: 'relative', flexShrink: 0 }}>
       <button
-        onClick={() => setOpen((o) => !o)}
+        ref={btnRef}
+        onClick={handleOpen}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
           padding: '9px 13px', borderRadius: 999, border: 'none', cursor: 'pointer',
@@ -42,8 +54,8 @@ function DropdownPill({ label, active, options, value, onChange }) {
         <IconChevDown size={15} style={{ marginRight: -2, opacity: 0.8, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
       </button>
       {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50,
+        <div ref={ref} style={{
+          position: 'fixed', top: pos.top, left: pos.left, zIndex: 200,
           background: 'var(--surface)', borderRadius: 14, overflow: 'hidden',
           boxShadow: '0 8px 24px rgba(0,0,0,0.14), 0 0 0 1px var(--line)',
           minWidth: 120,
