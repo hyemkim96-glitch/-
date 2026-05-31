@@ -158,21 +158,6 @@ function FilterBar({ filters, setFilters }) {
           onChange={(v) => setFilters({ ...filters, type: v })}
         />
       </div>
-      {/* 주거 유형 */}
-      <div data-no-drag>
-        <DropdownPill
-          label={filters.home === '무관' ? '유형' : filters.home}
-          active={filters.home !== '무관'}
-          value={filters.home}
-          options={[
-            { value: '무관',   label: '유형 무관' },
-            { value: '원룸',   label: '원룸' },
-            { value: '투룸',   label: '투룸' },
-            { value: '아파트', label: '아파트' },
-          ]}
-          onChange={(v) => setFilters({ ...filters, home: v })}
-        />
-      </div>
       {/* 대출 포함 토글 */}
       <TogglePill label="대출 포함" on={filters.loan} onClick={() => setFilters({ ...filters, loan: !filters.loan })} />
     </div>
