@@ -117,7 +117,213 @@ export const CANDIDATE_REGIONS = [
   // ── 서울 ──────────────────────────────────────────────────────────
   {
     id: 'hapjeong', gu: '마포구', dong: '합정동',
+    lawdCd: '11440',  // 마포구 법정동코드 앞 5자리
     coords: { lat: 37.5497, lng: 126.9135 }, pin: { x: 30, y: 36 },
+    options: [
+      { type: '전세', depositMan: 18000 },
+      { type: '월세', depositForRent: 3000, rentMan: 65 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 17500, avgRentMan: 63,
+    defaultLife: { subway: 3, store: 12, mart: 2, hospital: 7 },
+  },
+  {
+    id: 'dangsan', gu: '영등포구', dong: '당산동',
+    lawdCd: '11560',
+    coords: { lat: 37.5337, lng: 126.9012 }, pin: { x: 19, y: 57 },
+    options: [
+      { type: '전세', depositMan: 16500 },
+      { type: '월세', depositForRent: 2000, rentMan: 55 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 16000, avgRentMan: 54,
+    defaultLife: { subway: 2, store: 8, mart: 1, hospital: 5 },
+  },
+  {
+    id: 'sangdo', gu: '동작구', dong: '상도동',
+    lawdCd: '11590',
+    coords: { lat: 37.4969, lng: 126.9497 }, pin: { x: 47, y: 66 },
+    options: [
+      { type: '전세', depositMan: 13000 },
+      { type: '월세', depositForRent: 1500, rentMan: 52 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 13500, avgRentMan: 53,
+    defaultLife: { subway: 1, store: 7, mart: 0, hospital: 4 },
+  },
+  {
+    id: 'sillim', gu: '관악구', dong: '신림동',
+    lawdCd: '11620',
+    coords: { lat: 37.4838, lng: 126.9293 }, pin: { x: 38, y: 82 },
+    options: [
+      { type: '전세', depositMan: 11000 },
+      { type: '월세', depositForRent: 1000, rentMan: 45 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 11500, avgRentMan: 46,
+    defaultLife: { subway: 1, store: 9, mart: 1, hospital: 4 },
+  },
+  {
+    id: 'hyochang', gu: '용산구', dong: '효창동',
+    lawdCd: '11170',
+    coords: { lat: 37.5407, lng: 126.9607 }, pin: { x: 54, y: 44 },
+    options: [
+      { type: '전세', depositMan: 19500 },
+      { type: '월세', depositForRent: 3500, rentMan: 72 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 19000, avgRentMan: 70,
+    defaultLife: { subway: 2, store: 8, mart: 1, hospital: 6 },
+  },
+  {
+    id: 'noryangjin', gu: '동작구', dong: '노량진동',
+    lawdCd: '11590',
+    coords: { lat: 37.5135, lng: 126.9426 }, pin: { x: 42, y: 72 },
+    options: [
+      { type: '전세', depositMan: 12000 },
+      { type: '월세', depositForRent: 1000, rentMan: 48 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 12500, avgRentMan: 49,
+    defaultLife: { subway: 2, store: 6, mart: 0, hospital: 3 },
+  },
+  {
+    id: 'mapo', gu: '마포구', dong: '마포동',
+    lawdCd: '11440',
+    coords: { lat: 37.5443, lng: 126.9517 }, pin: { x: 36, y: 42 },
+    options: [
+      { type: '전세', depositMan: 17000 },
+      { type: '월세', depositForRent: 2500, rentMan: 60 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 16500, avgRentMan: 59,
+    defaultLife: { subway: 2, store: 9, mart: 1, hospital: 6 },
+  },
+  {
+    id: 'yeouido', gu: '영등포구', dong: '여의도동',
+    lawdCd: '11560',
+    coords: { lat: 37.5219, lng: 126.9244 }, pin: { x: 22, y: 62 },
+    options: [
+      { type: '전세', depositMan: 24000 },
+      { type: '월세', depositForRent: 4000, rentMan: 88 },
+    ],
+    maintenanceFee: 10,
+    avgJeonsaMan: 23000, avgRentMan: 85,
+    defaultLife: { subway: 3, store: 10, mart: 2, hospital: 7 },
+  },
+  {
+    id: 'seongsu', gu: '성동구', dong: '성수동',
+    lawdCd: '11200',
+    coords: { lat: 37.5445, lng: 127.0559 }, pin: { x: 72, y: 38 },
+    options: [
+      { type: '전세', depositMan: 20000 },
+      { type: '월세', depositForRent: 3000, rentMan: 78 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 19500, avgRentMan: 76,
+    defaultLife: { subway: 1, store: 10, mart: 1, hospital: 5 },
+  },
+  {
+    id: 'eunpyeong', gu: '은평구', dong: '녹번동',
+    lawdCd: '11380',
+    coords: { lat: 37.6021, lng: 126.9283 }, pin: { x: 28, y: 18 },
+    options: [
+      { type: '전세', depositMan: 10000 },
+      { type: '월세', depositForRent: 1000, rentMan: 40 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 10500, avgRentMan: 41,
+    defaultLife: { subway: 1, store: 6, mart: 1, hospital: 4 },
+  },
+
+  // ── 경기 남부 (수원·안양·성남 직장 대응) ─────────────────────────
+  {
+    id: 'suwon_ingye', gu: '수원시 팔달구', dong: '인계동',
+    lawdCd: '41115',
+    coords: { lat: 37.2636, lng: 127.0286 }, pin: { x: 55, y: 95 },
+    options: [
+      { type: '전세', depositMan: 8000 },
+      { type: '월세', depositForRent: 500, rentMan: 35 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 8000, avgRentMan: 35,
+    defaultLife: { subway: 1, store: 8, mart: 2, hospital: 5 },
+  },
+  {
+    id: 'suwon_youngtong', gu: '수원시 영통구', dong: '영통동',
+    lawdCd: '41117',
+    coords: { lat: 37.2512, lng: 127.0718 }, pin: { x: 62, y: 97 },
+    options: [
+      { type: '전세', depositMan: 10000 },
+      { type: '월세', depositForRent: 1000, rentMan: 40 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 10000, avgRentMan: 40,
+    defaultLife: { subway: 2, store: 9, mart: 2, hospital: 5 },
+  },
+  {
+    id: 'anyang_dongan', gu: '안양시 동안구', dong: '평촌동',
+    lawdCd: '41173',
+    coords: { lat: 37.3939, lng: 126.9528 }, pin: { x: 44, y: 88 },
+    options: [
+      { type: '전세', depositMan: 11000 },
+      { type: '월세', depositForRent: 1000, rentMan: 42 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 11000, avgRentMan: 42,
+    defaultLife: { subway: 2, store: 7, mart: 2, hospital: 4 },
+  },
+  {
+    id: 'seongnam_bundang', gu: '성남시 분당구', dong: '서현동',
+    lawdCd: '41135',
+    coords: { lat: 37.3836, lng: 127.1218 }, pin: { x: 74, y: 90 },
+    options: [
+      { type: '전세', depositMan: 15000 },
+      { type: '월세', depositForRent: 2000, rentMan: 55 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 15000, avgRentMan: 55,
+    defaultLife: { subway: 2, store: 8, mart: 2, hospital: 5 },
+  },
+  {
+    id: 'gwacheon', gu: '과천시', dong: '별양동',
+    lawdCd: '41290',
+    coords: { lat: 37.4290, lng: 126.9878 }, pin: { x: 50, y: 85 },
+    options: [
+      { type: '전세', depositMan: 13000 },
+      { type: '월세', depositForRent: 1500, rentMan: 48 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 13000, avgRentMan: 48,
+    defaultLife: { subway: 1, store: 5, mart: 1, hospital: 3 },
+  },
+
+  // ── 경기 동부·북부 ────────────────────────────────────────────────
+  {
+    id: 'pangyo', gu: '성남시 분당구', dong: '판교동',
+    lawdCd: '41135',
+    coords: { lat: 37.3943, lng: 127.1111 }, pin: { x: 71, y: 88 },
+    options: [
+      { type: '전세', depositMan: 18000 },
+      { type: '월세', depositForRent: 2500, rentMan: 65 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 18000, avgRentMan: 65,
+    defaultLife: { subway: 1, store: 7, mart: 1, hospital: 4 },
+  },
+  {
+    id: 'yongin_giheung', gu: '용인시 기흥구', dong: '영덕동',
+    lawdCd: '41463',
+    coords: { lat: 37.2748, lng: 127.1151 }, pin: { x: 68, y: 93 },
+    options: [
+      { type: '전세', depositMan: 9000 },
+      { type: '월세', depositForRent: 500, rentMan: 38 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 9000, avgRentMan: 38,
+    defaultLife: { subway: 1, store: 6, mart: 1, hospital: 3 },
+  },
+];
     options: [
       { type: '전세', depositMan: 18000 },
       { type: '월세', depositForRent: 3000, rentMan: 65 },

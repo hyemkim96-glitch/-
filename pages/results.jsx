@@ -453,12 +453,34 @@ function estimateCommute(km, transport) {
 
 async function buildResults({ asset, income, transport, workLat, workLng, loan, loanRate }) {
   const results = [];
-  // 서울 시청 좌표: 직장 좌표 없을 때 fallback
   const wx = workLng || 126.9780;
   const wy = workLat || 37.5665;
 
+  // 실거래가 API 병렬 호출 (지역별 최신 시세)
+  const priceCache = {};
+  await Promise.all(
+    [...new Set(CANDIDATE_REGIONS.map((r) => r.lawdCd).filter(Boolean))].map(async (lawdCd) => {
+      try {
+        const r = await fetch(`/api/prices?lawdCd=${lawdCd}&umdNm=`);
+        if (r.ok) priceCache[lawdCd] = await r.json();
+      } catch {}
+    })
+  );
+
   for (const region of CANDIDATE_REGIONS) {
-    for (const opt of region.options) {
+    // 실거래가로 시세 업데이트 (있을 때만)
+    const live = region.lawdCd ? priceCache[region.lawdCd] : null;
+    const liveJeonsa = live?.oneroom?.jeonsa || region.avgJeonsaMan;
+    const liveRent   = live?.oneroom?.wolseRent || region.avgRentMan;
+    const liveRentDep = live?.oneroom?.wolseDeposit || Math.round(liveJeonsa * 0.1);
+
+    // 실거래가 기반 옵션으로 동적 생성
+    const dynamicOptions = [
+      { type: '전세', depositMan: liveJeonsa },
+      { type: '월세', depositForRent: liveRentDep, rentMan: liveRent },
+    ];
+
+    for (const opt of dynamicOptions) {
       const deposit = opt.type === '전세' ? opt.depositMan : (opt.depositForRent || 0);
       const rentMan = opt.type === '월세' ? opt.rentMan : 0;
 
@@ -523,8 +545,8 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
 
       // 가격 레이블
       const priceLabel = opt.type === '전세'
-        ? formatKRW(opt.depositMan)
-        : `보증금 ${formatKRW(opt.depositForRent || 0)} · 월 ${opt.rentMan}만원`;
+        ? formatKRW(deposit)
+        : `보증금 ${formatKRW(opt.depositForRent || 0)} · 월 ${rentMan}만원`;
       const transportIcon = (transport === '자가용') ? '🚗' : '🚇';
       const commuteLabel = `${transportIcon} ${commuteMin}분${isEstimated ? '*' : ''}`;
 
