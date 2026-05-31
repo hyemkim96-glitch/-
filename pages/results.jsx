@@ -11,21 +11,79 @@ import {
   IconExternal, IconPin, IconChevRight, IconList,
 } from '../components/icons';
 
-// ── Filter Pill ────────────────────────────────────────────────────
-function FilterPill({ label, chevron, active, toggle, on, onClick }) {
-  const isActive = active || (toggle && on);
+// ── DropdownPill: 클릭 시 드롭다운 펼치는 필터 칩 ─────────────────
+function DropdownPill({ label, active, options, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          padding: '9px 13px', borderRadius: 999, border: 'none', cursor: 'pointer',
+          fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap',
+          background: active ? 'var(--accent)' : 'var(--surface)',
+          color: active ? '#fff' : 'var(--ink-2)',
+          transition: 'all .14s ease', WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        {label}
+        <IconChevDown size={15} style={{ marginRight: -2, opacity: 0.8, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50,
+          background: 'var(--surface)', borderRadius: 14, overflow: 'hidden',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.14), 0 0 0 1px var(--line)',
+          minWidth: 120,
+        }}>
+          {options.map((opt, i) => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                width: '100%', padding: '12px 16px', border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 14, fontWeight: 600, textAlign: 'left',
+                background: value === opt.value ? 'var(--accent-weak)' : 'transparent',
+                color: value === opt.value ? 'var(--accent)' : 'var(--ink)',
+                borderTop: i ? '1px solid var(--bg)' : 'none',
+              }}
+            >
+              {opt.label}
+              {value === opt.value && <span style={{ fontSize: 12, color: 'var(--accent)' }}>✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── 토글 칩 (대출 포함 ON/OFF) ─────────────────────────────────────
+function TogglePill({ label, on, onClick }) {
   return (
     <button onClick={onClick} style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
       padding: '9px 13px', borderRadius: 999, border: 'none', cursor: 'pointer',
       fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap',
-      background: isActive ? 'var(--accent)' : 'var(--surface)',
-      color: isActive ? '#fff' : 'var(--ink-2)',
+      background: on ? 'var(--accent)' : 'var(--surface)',
+      color: on ? '#fff' : 'var(--ink-2)',
       transition: 'all .14s ease', WebkitTapHighlightColor: 'transparent',
     }}>
-      {toggle && <span style={{ width: 7, height: 7, borderRadius: 999, background: on ? '#fff' : 'var(--ink-3)' }} />}
+      <span style={{ width: 7, height: 7, borderRadius: 999, background: on ? '#fff' : 'var(--ink-3)' }} />
       {label}
-      {chevron && <IconChevDown size={15} style={{ marginRight: -2, opacity: 0.8 }} />}
     </button>
   );
 }
@@ -35,6 +93,8 @@ function FilterBar({ filters, setFilters }) {
   const drag = useRef({ active: false, startX: 0, scrollLeft: 0 });
 
   function onMouseDown(e) {
+    // 드롭다운 버튼 클릭은 드래그 시작 안 함
+    if (e.target.closest('[data-no-drag]')) return;
     drag.current = { active: true, startX: e.pageX - ref.current.offsetLeft, scrollLeft: ref.current.scrollLeft };
     ref.current.style.cursor = 'grabbing';
   }
@@ -58,17 +118,51 @@ function FilterBar({ filters, setFilters }) {
       onMouseLeave={onMouseUp}
       style={{ display: 'flex', overflowX: 'auto', scrollbarWidth: 'none', gap: '4px', padding: '14px 20px', cursor: 'grab', userSelect: 'none' }}
     >
-      <FilterPill label={filters.type} chevron active={filters.type !== '전체'} onClick={() => {
-        const order = ['전체', '전세만', '월세만'];
-        setFilters({ ...filters, type: order[(order.indexOf(filters.type) + 1) % 3] });
-      }} />
-      <FilterPill label={filters.home} chevron active={filters.home !== '무관'} onClick={() => {
-        const order = ['무관', '원룸', '투룸', '아파트'];
-        setFilters({ ...filters, home: order[(order.indexOf(filters.home) + 1) % 4] });
-      }} />
-      <FilterPill label="60분 이하" chevron />
-      <FilterPill label="대출 포함" toggle on={filters.loan} onClick={() => setFilters({ ...filters, loan: !filters.loan })} />
-      <FilterPill label="추천순" chevron active />
+      {/* 추천순 — 가장 앞 */}
+      <div data-no-drag>
+        <DropdownPill
+          label={filters.sort === 'monthly' ? '고정비순' : filters.sort === 'commute' ? '출퇴근순' : '추천순'}
+          active
+          value={filters.sort || 'score'}
+          options={[
+            { value: 'score',    label: '추천순' },
+            { value: 'monthly',  label: '고정비순' },
+            { value: 'commute',  label: '출퇴근순' },
+          ]}
+          onChange={(v) => setFilters({ ...filters, sort: v })}
+        />
+      </div>
+      {/* 거래 유형 */}
+      <div data-no-drag>
+        <DropdownPill
+          label={filters.type === '전세만' ? '전세' : filters.type === '월세만' ? '월세' : '전·월세'}
+          active={filters.type !== '전체'}
+          value={filters.type}
+          options={[
+            { value: '전체',   label: '전·월세' },
+            { value: '전세만', label: '전세만' },
+            { value: '월세만', label: '월세만' },
+          ]}
+          onChange={(v) => setFilters({ ...filters, type: v })}
+        />
+      </div>
+      {/* 주거 유형 */}
+      <div data-no-drag>
+        <DropdownPill
+          label={filters.home === '무관' ? '유형' : filters.home}
+          active={filters.home !== '무관'}
+          value={filters.home}
+          options={[
+            { value: '무관',   label: '유형 무관' },
+            { value: '원룸',   label: '원룸' },
+            { value: '투룸',   label: '투룸' },
+            { value: '아파트', label: '아파트' },
+          ]}
+          onChange={(v) => setFilters({ ...filters, home: v })}
+        />
+      </div>
+      {/* 대출 포함 토글 */}
+      <TogglePill label="대출 포함" on={filters.loan} onClick={() => setFilters({ ...filters, loan: !filters.loan })} />
     </div>
   );
 }
@@ -361,7 +455,8 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
       const priceLabel = opt.type === '전세'
         ? formatKRW(opt.depositMan)
         : `보증금 ${formatKRW(opt.depositForRent || 0)} · 월 ${opt.rentMan}만원`;
-      const commuteLabel = `${commuteMin}분${isEstimated ? '*' : ''}`;
+      const transportIcon = (transport === '자가용') ? '🚗' : '🚇';
+      const commuteLabel = `${transportIcon} ${commuteMin}분${isEstimated ? '*' : ''}`;
 
       results.push({
         id: `${region.id}_${opt.type}`,
@@ -440,12 +535,18 @@ export default function ResultsPage() {
     return () => clearTimeout(slowTimer);
   }, []);
 
-  // 필터 적용
-  const filtered = allResults.filter((item) => {
-    if (filters.type === '전세만' && item.type !== '전세') return false;
-    if (filters.type === '월세만' && item.type !== '월세') return false;
-    return true;
-  });
+  // 필터 + 정렬 적용
+  const filtered = allResults
+    .filter((item) => {
+      if (filters.type === '전세만' && item.type !== '전세') return false;
+      if (filters.type === '월세만' && item.type !== '월세') return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (filters.sort === 'monthly') return a.monthlyMan - b.monthlyMan;
+      if (filters.sort === 'commute') return a.commuteMin - b.commuteMin;
+      return b.score - a.score; // 기본: 추천순
+    });
 
   const header = (
     <div style={{ paddingTop: 50, background: 'var(--bg)', boxShadow: '0 1px 0 rgba(0,0,0,0.03)' }}>
