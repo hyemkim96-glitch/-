@@ -51,8 +51,8 @@ export default function Step2Page() {
 
   return (
     <Screen header={header} footer={footer}>
-      <div style={{ padding: '14px 20px 8px' }}>
-        <h1 style={{ margin: '0 0 26px', fontSize: 23, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>조건을<br />설정해주세요</h1>
+      <div style={{ padding: '22px 20px 8px' }}>
+        <h1 style={{ margin: '0 0 26px', fontSize: 23, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>조건을 설정해주세요</h1>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
           <OptionGroup title="주거 형태">
             <Chip label="전월세" selected={prefs.housing === '전월세'} onClick={() => set('housing', '전월세')} />
