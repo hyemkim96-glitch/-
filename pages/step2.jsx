@@ -17,7 +17,7 @@ function OptionGroup({ title, children }) {
 
 export default function Step2Page() {
   const router = useRouter();
-  const [prefs, setPrefsLocal] = useState({ housing: '전월세', homeType: '무관', transport: '대중교통' });
+  const [prefs, setPrefsLocal] = useState({ housing: '전월세', transport: '대중교통' });
   const [tip, setTip] = useState(false);
 
   useEffect(() => {
@@ -71,11 +71,6 @@ export default function Step2Page() {
                 </div>
               )}
             </div>
-          </OptionGroup>
-          <OptionGroup title="선호 주거 유형">
-            {['원룸', '투룸', '아파트', '무관'].map((o) => (
-              <Chip key={o} label={o} selected={prefs.homeType === o} onClick={() => set('homeType', o)} />
-            ))}
           </OptionGroup>
           <OptionGroup title="이동 수단">
             <Chip label="대중교통" selected={prefs.transport === '대중교통'} onClick={() => set('transport', '대중교통')} />

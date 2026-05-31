@@ -306,8 +306,9 @@ function ExpandedSheet({ item, onClose, myAsset }) {
   // (자유 텍스트 검색 URL은 동작이 불안정함). 거래유형은 지도 로드 후 필터로 선택.
   const lat = item.coords?.lat;
   const lng = item.coords?.lng;
+  // 좌표 기반 지도 URL: 해당 동네 매물 표시 (웹/앱 공통)
   const dabangUrl = (lat && lng)
-    ? `https://www.dabangapp.com/map/onetwo?m_lat=${lat}&m_lng=${lng}&m_zoom=15`
+    ? `https://www.dabangapp.com/map/onetwo?m_lat=${lat}&m_lng=${lng}&m_zoom=14&q=${encodeURIComponent(item.dong)}`
     : `https://www.dabangapp.com/search/${encodeURIComponent(item.dong)}`;
 
 
@@ -315,7 +316,7 @@ function ExpandedSheet({ item, onClose, myAsset }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 40 }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(15,20,28,0.45)', animation: 'fade .2s ease' }} />
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '90%', display: 'flex', flexDirection: 'column',
+      <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: 0, width: '100%', maxWidth: 480, maxHeight: '90%', display: 'flex', flexDirection: 'column',
         background: 'var(--surface)', borderRadius: '20px 20px 0 0', animation: 'slideUp .28s cubic-bezier(.2,.8,.2,1)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
@@ -452,27 +453,71 @@ function estimateCommute(km, transport) {
 }
 
 async function buildResults({ asset, income, transport, workLat, workLng, loan, loanRate }) {
-  const results = [];
   const wx = workLng || 126.9780;
   const wy = workLat || 37.5665;
 
-  // 실거래가 API 병렬 호출 (지역별 최신 시세)
-  const priceCache = {};
-  await Promise.all(
-    [...new Set(CANDIDATE_REGIONS.map((r) => r.lawdCd).filter(Boolean))].map(async (lawdCd) => {
+  // 모든 API 병렬 호출: 실거래가 + 출퇴근 + 생활권
+  const uniqueLawdCds = [...new Set(CANDIDATE_REGIONS.map((r) => r.lawdCd).filter(Boolean))];
+
+  const [priceResults, commuteResults, facilityResults] = await Promise.all([
+    // 실거래가 (지역 중복 제거 후 병렬)
+    Promise.all(uniqueLawdCds.map(async (lawdCd) => {
       try {
         const r = await fetch(`/api/prices?lawdCd=${lawdCd}&umdNm=`);
-        if (r.ok) priceCache[lawdCd] = await r.json();
+        if (r.ok) return [lawdCd, await r.json()];
       } catch {}
-    })
-  );
+      return [lawdCd, null];
+    })),
+    // 출퇴근 (지역별 병렬)
+    Promise.all(CANDIDATE_REGIONS.map(async (region) => {
+      try {
+        const r = await fetch(
+          `/api/commute?ox=${wx}&oy=${wy}&dx=${region.coords.lng}&dy=${region.coords.lat}&transport=${encodeURIComponent(transport || '대중교통')}`
+        );
+        const d = await r.json();
+        return { minutes: d.minutes, isEstimated: d.isEstimated };
+      } catch {
+        return null;
+      }
+    })),
+    // 생활권 (지역별 병렬)
+    Promise.all(CANDIDATE_REGIONS.map(async (region) => {
+      try {
+        const r = await fetch(`/api/facilities?lat=${region.coords.lat}&lng=${region.coords.lng}`);
+        const apiLife = await r.json();
+        const total = Object.values(apiLife).reduce((s, v) => s + v, 0);
+        return total > 0 ? apiLife : null;
+      } catch {
+        return null;
+      }
+    })),
+  ]);
 
-  for (const region of CANDIDATE_REGIONS) {
+  const priceCache = Object.fromEntries(priceResults);
+
+  const results = [];
+  CANDIDATE_REGIONS.forEach((region, idx) => {
     // 실거래가로 시세 업데이트 (있을 때만)
     const live = region.lawdCd ? priceCache[region.lawdCd] : null;
     const liveJeonsa = live?.oneroom?.jeonsa || region.avgJeonsaMan;
     const liveRent   = live?.oneroom?.wolseRent || region.avgRentMan;
     const liveRentDep = live?.oneroom?.wolseDeposit || Math.round(liveJeonsa * 0.1);
+
+    // 출퇴근
+    const commuteData = commuteResults[idx];
+    let commuteMin = commuteData?.minutes ?? null;
+    let isEstimated = commuteData ? commuteData.isEstimated : true;
+    if (commuteMin == null) {
+      const km = haversineKm(wy, wx, region.coords.lat, region.coords.lng);
+      commuteMin = estimateCommute(km, transport);
+      isEstimated = true;
+    }
+
+    // 출퇴근 90분 초과 지역 제외
+    if (commuteMin > 90) return;
+
+    // 생활권
+    const life = facilityResults[idx] || region.defaultLife;
 
     // 실거래가 기반 옵션으로 동적 생성
     const dynamicOptions = [
@@ -484,66 +529,27 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
       const deposit = opt.type === '전세' ? opt.depositMan : (opt.depositForRent || 0);
       const rentMan = opt.type === '월세' ? opt.rentMan : 0;
 
-      // 예산 필터: 대출 미포함 시 보증금 ≤ 보유 자산
       if (!loan && deposit > asset) continue;
 
-      // 최소 자본금 = 보증금 (실제로 묶이는 돈)
       const capitalMan = deposit;
-
-      // 월 고정비 = 대출이자 + 월세 + 관리비
       const loanNeeded = Math.max(0, deposit - asset);
       const usedRate = loanRate || 3.5;
       const monthlyInterest = Math.round((loanNeeded * (usedRate / 100)) / 12);
       const monthlyMan = monthlyInterest + rentMan + (region.maintenanceFee || 0);
 
-      // 출퇴근 시간 — API 우선, 실패 시 직선거리로 직접 계산
-      let commuteMin = null;
-      let isEstimated = true;
-      try {
-        const r = await fetch(
-          `/api/commute?ox=${wx}&oy=${wy}&dx=${region.coords.lng}&dy=${region.coords.lat}&transport=${encodeURIComponent(transport || '대중교통')}`
-        );
-        const d = await r.json();
-        commuteMin = d.minutes;
-        isEstimated = d.isEstimated;
-      } catch {}
-
-      if (commuteMin == null) {
-        const km = haversineKm(wy, wx, region.coords.lat, region.coords.lng);
-        commuteMin = estimateCommute(km, transport);
-        isEstimated = true;
-      }
-
-      // 생활권 — API 우선, 실패/0 시 지역 기본값 사용
-      let life = region.defaultLife;
-      try {
-        const r = await fetch(`/api/facilities?lat=${region.coords.lat}&lng=${region.coords.lng}`);
-        const apiLife = await r.json();
-        // API가 실제 데이터를 줬을 때만 사용 (합계 > 0)
-        const total = Object.values(apiLife).reduce((s, v) => s + v, 0);
-        if (total > 0) life = apiLife;
-      } catch {}
-
-      // 출퇴근 90분 초과 지역 제외 (직주근접 핵심 — 너무 먼 곳은 후보 아님)
-      if (commuteMin > 90) continue;
-
-      // 감당 불가 제외 — 월 고정비가 소득의 70% 초과면 후보에서 뺀다
       if (income > 0 && monthlyMan > income * MAX_AFFORDABLE_RATIO) continue;
 
-      // 세부 점수 (각 0~1) → 가중치 적용
       const cs = commuteScore(commuteMin);
       const ps = priceScore(monthlyMan, income);
       const ls = lifeScore(life, CANDIDATE_REGIONS.map((r) => r.defaultLife));
       const score = totalScore(cs, ps, ls);
 
-      // 점수 근거 (상세 화면 표시용)
       const breakdown = {
         commute: Math.round(cs * 100),
         price: Math.round(ps * 100),
         life: Math.round(ls * 100),
       };
 
-      // 가격 레이블
       const priceLabel = opt.type === '전세'
         ? formatKRW(deposit)
         : `보증금 ${formatKRW(opt.depositForRent || 0)} · 월 ${rentMan}만원`;
@@ -571,9 +577,8 @@ async function buildResults({ asset, income, transport, workLat, workLng, loan, 
         needsLoan: deposit > asset,
       });
     }
-  }
+  });
 
-  // 추천순 정렬
   results.sort((a, b) => b.score - a.score);
   return results;
 }
