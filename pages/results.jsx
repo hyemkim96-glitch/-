@@ -303,7 +303,8 @@ function DetailStat({ icon, label, value, note }) {
 
 // ── ExpandedSheet ─────────────────────────────────────────────────
 function ExpandedSheet({ item, onClose }) {
-  const naverLandUrl = `https://land.naver.com/search/?query=${encodeURIComponent(`${item.dong} ${item.type} 원룸`)}`;
+  const typeParam = item.type === '전세' ? 'jeonse' : 'monthly';
+  const dabangUrl = `https://www.dabangapp.com/map/oneroom?search_type=location&search_query=${encodeURIComponent(item.dong)}&trade_type=${typeParam}`;
 
 
 
@@ -355,14 +356,14 @@ function ExpandedSheet({ item, onClose }) {
           )}
           <MiniMap item={item} />
           <div style={{ marginTop: 20 }}>
-            <a href={naverLandUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+            <a href={dabangUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
               <button style={{
                 width: '100%', height: 54, borderRadius: 14, border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 16, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                background: '#03C75A', color: '#fff',
+                background: '#FF4076', color: '#fff',
               }}>
-                네이버 부동산에서 {item.dong} 보기 <IconExternal size={18} />
+                다방에서 {item.dong} {item.type} 보기 <IconExternal size={18} />
               </button>
             </a>
           </div>
