@@ -171,9 +171,15 @@ function DetailStat({ icon, label, value }) {
 
 // ── ExpandedSheet ─────────────────────────────────────────────────
 function ExpandedSheet({ item, onClose }) {
-  const zigbangUrl = item.type === '전세'
-    ? `https://www.zigbang.com/home/oneroom?lat=${item.coords?.lat}&lng=${item.coords?.lng}&radius=1&salesTypes[]=전세&depositMax=${item.depositMan}`
-    : `https://www.zigbang.com/home/oneroom?lat=${item.coords?.lat}&lng=${item.coords?.lng}&radius=1&salesTypes[]=월세&depositMax=${item.depositForRent || 3000}`;
+  // 직방 딥링크: 좌표 기반 지도 이동 + 필터 적용
+  // salesType: jeonse(전세) | monthly(월세)
+  const salesType = item.type === '전세' ? 'jeonse' : 'monthly';
+  const depositMax = item.type === '전세' ? item.depositMan : (item.depositForRent || 3000);
+  const lat = item.coords?.lat;
+  const lng = item.coords?.lng;
+  const zigbangUrl = lat && lng
+    ? `https://www.zigbang.com/home/oneroom?lat=${lat}&lng=${lng}&zoom=14&salesType=${salesType}&depositMin=0&depositMax=${depositMax}`
+    : `https://www.zigbang.com/home/search?q=${encodeURIComponent(`${item.gu} ${item.dong}`)}&salesType=${salesType}`;
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 40 }}>
