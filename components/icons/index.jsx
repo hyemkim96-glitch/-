@@ -22,7 +22,7 @@ export const IconPin        = (p) => <Ri name="map-pin-2-fill"          {...p} /
 export const IconTrash      = (p) => <Ri name="delete-bin-6-line"       {...p} />;
 export const IconPlus       = (p) => <Ri name="add-line"                {...p} />;
 export const IconSearch     = (p) => <Ri name="search-2-line"           {...p} />;
-export const IconWon        = (p) => <Ri name="money-won-circle-line"   {...p} />;
+export const IconWon        = (p) => <Ri name="coin-line"               {...p} />;
 export const IconInfo       = (p) => <Ri name="information-line"        {...p} />;
 export const IconCheck      = (p) => <Ri name="check-line"              {...p} />;
 export const IconWallet     = (p) => <Ri name="wallet-3-line"           {...p} />;
