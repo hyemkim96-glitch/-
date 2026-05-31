@@ -336,8 +336,6 @@ function ExpandedSheet({ item, onClose, myAsset }) {
             </div>
           )}
           <div style={{ marginTop: 18, display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: '14px 0', overflow: 'hidden' }}>
-            <DetailStat icon={<IconWallet size={21} />} label="보유 자산" value={formatKRW(myAsset ?? item.capitalMan)} />
-            <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
             <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={`${item.monthlyMan}만원`} note="관리비 포함" />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
             <DetailStat icon={<IconWalk size={21} />} label="출퇴근" value={item.commuteLabel} />
@@ -373,7 +371,7 @@ function ExpandedSheet({ item, onClose, myAsset }) {
 }
 
 // ── 카카오맵 기반 결과 지도 ────────────────────────────────────────
-function ResultsKakaoMap({ items, onExpand }) {
+function ResultsKakaoMap({ items, onExpand, workLat, workLng }) {
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -384,14 +382,24 @@ function ResultsKakaoMap({ items, onExpand }) {
       kakao.maps.load(() => {
         const center = new kakao.maps.LatLng(37.5326, 126.9903);
         const map = new kakao.maps.Map(containerRef.current, { center, level: 8 });
+
+        // 추천 지역 핀
         items.forEach((item) => {
           if (!item.coords) return;
           const pos = new kakao.maps.LatLng(item.coords.lat, item.coords.lng);
           const fg = gradeColors(item.score).fg.replace('var(--accent)', '#3182F6').replace('var(--good)', '#15B97E').replace('var(--mid)', '#F59000');
-          const content = `<div onclick="void(0)" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:999px;white-space:nowrap;background:#fff;font-weight:700;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,0.16);font-family:Pretendard,sans-serif;cursor:pointer;">${item.dong}<span style="font-weight:800;color:${fg}">${item.score}</span></div>`;
+          const content = `<div onclick="void(0)" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:999px;white-space:nowrap;background:#fff;font-weight:700;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,0.16);font-family:Pretendard,sans-serif;cursor:pointer;">${item.dong}<span style="font-weight:800;color:${fg}">&nbsp;${item.score}점</span></div>`;
           const overlay = new kakao.maps.CustomOverlay({ position: pos, content, yAnchor: 1.3 });
           overlay.setMap(map);
         });
+
+        // 회사 위치 마커
+        if (workLat && workLng) {
+          const workPos = new kakao.maps.LatLng(workLat, workLng);
+          const workContent = `<div style="display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:999px;white-space:nowrap;background:#1A1E27;color:#fff;font-weight:700;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,0.25);font-family:Pretendard,sans-serif;">🏢 직장</div>`;
+          const workOverlay = new kakao.maps.CustomOverlay({ position: workPos, content: workContent, yAnchor: 1.3 });
+          workOverlay.setMap(map);
+        }
       });
     }
     if (window.kakao?.maps) init();
@@ -399,7 +407,7 @@ function ResultsKakaoMap({ items, onExpand }) {
       const t = setInterval(() => { if (window.kakao?.maps) { clearInterval(t); init(); } }, 200);
       return () => clearInterval(t);
     }
-  }, [items]);
+  }, [items, workLat, workLng]);
 
   return <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />;
 }
@@ -528,12 +536,14 @@ export default function ResultsPage() {
   const [allResults, setAllResults] = useState([]);
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
   const [myAsset, setMyAsset] = useState(0);
+  const [workCoords, setWorkCoords] = useState({ lat: null, lng: null });
 
   useEffect(() => {
     const f = getFormData();
     const p = getPrefsData();
     const assetVal = parseInt(f.asset || '0', 10);
     setMyAsset(assetVal);
+    setWorkCoords({ lat: f.workLat || null, lng: f.workLng || null });
     setFilters((prev) => ({ ...prev, type: p.housing === '전세' ? '전세만' : p.housing === '월세' ? '월세만' : '전체' }));
 
     const slowTimer = setTimeout(() => setSlowWarning(true), 3000);
@@ -592,24 +602,7 @@ export default function ResultsPage() {
     <div style={{ paddingTop: 50, background: 'var(--bg)', boxShadow: '0 1px 0 rgba(0,0,0,0.03)' }}>
       <div style={{ padding: '6px 16px 0', display: 'flex', alignItems: 'center', gap: 4 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>추천 지역</h1>
-        {/* 지도/목록 토글 — 결과 있을 때만 표시 */}
-        {!loading && filtered.length > 0 && (
-          <button
-            onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
-            style={{
-              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
-              padding: '7px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
-              background: 'var(--surface)', color: 'var(--ink-2)',
-              boxShadow: 'var(--card-shadow)',
-              transition: 'all .14s ease',
-            }}
-          >
-            {viewMode === 'list' ? <><IconMap size={15} /> 지도</> : <><IconList size={15} /> 목록</>}
-          </button>
-        )}
-        {/* 로딩 중에는 토글 자리 확보 */}
-        {(loading || filtered.length === 0) && <span style={{ marginLeft: 'auto' }} />}
+        <span style={{ marginLeft: 'auto' }} />
         {/* 닫기(홈으로) 버튼 */}
         <button
           onClick={() => router.push('/')}
@@ -636,7 +629,7 @@ export default function ResultsPage() {
         {header}
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
           {hasKakaoKey
-            ? <ResultsKakaoMap items={filtered} onExpand={setExpanded} />
+            ? <ResultsKakaoMap items={filtered} onExpand={setExpanded} workLat={workCoords.lat} workLng={workCoords.lng} />
             : (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 32px', textAlign: 'center', background: 'var(--bg)' }}>
                 <div style={{ width: 64, height: 64, borderRadius: 20, background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--card-shadow)' }}>
@@ -660,6 +653,15 @@ export default function ResultsPage() {
           }
         </div>
         {expanded && <ExpandedSheet item={expanded} onClose={() => setExpanded(null)} myAsset={myAsset} />}
+        {/* 하단 목록 토글 */}
+        <div style={{ padding: '12px 20px 28px', background: 'var(--bg)' }}>
+          <button
+            onClick={() => setViewMode('list')}
+            style={{ width: '100%', height: 50, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--surface)', color: 'var(--ink-2)', boxShadow: 'var(--card-shadow)' }}
+          >
+            <IconList size={17} /> 목록으로 보기
+          </button>
+        </div>
       </div>
     );
   }
@@ -694,6 +696,17 @@ export default function ResultsPage() {
             )}
           </div>
         </div>
+        {/* 하단 지도 토글 */}
+        {!loading && filtered.length > 0 && (
+          <div style={{ padding: '12px 20px 28px', background: 'var(--bg)' }}>
+            <button
+              onClick={() => setViewMode('map')}
+              style={{ width: '100%', height: 50, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--surface)', color: 'var(--ink-2)', boxShadow: 'var(--card-shadow)' }}
+            >
+              <IconMap size={17} /> 지도로 보기
+            </button>
+          </div>
+        )}
       </div>
       {expanded && <ExpandedSheet item={expanded} onClose={() => setExpanded(null)} myAsset={myAsset} />}
     </>
