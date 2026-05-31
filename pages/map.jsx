@@ -1,7 +1,7 @@
 // pages/map.jsx — 지도 뷰 (카카오맵 실제 연동, fallback: 가상 캔버스)
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { DEMO_DATA, ScoreBadge, regionLabel, scoreFg } from '../components/shared';
+import { CANDIDATE_REGIONS, ScoreBadge, regionLabel, scoreFg } from '../components/shared';
 import { MapCanvas } from '../components/layout/Screen';
 import { IconList, IconWalk, IconChevRight, IconChevDown } from '../components/icons';
 
@@ -112,10 +112,20 @@ function KakaoMap({ items, selectedId, onSelect }) {
   return <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />;
 }
 
+// CANDIDATE_REGIONS를 지도용 평면 목록으로 변환 (첫 번째 option 기준)
+const MAP_ITEMS = CANDIDATE_REGIONS.map((r) => ({
+  id: r.id,
+  gu: r.gu,
+  dong: r.dong,
+  coords: r.coords,
+  pin: r.pin,
+  score: 75, // 실제 점수는 results 페이지에서 계산, 지도는 placeholder
+}));
+
 export default function MapPage() {
   const router = useRouter();
-  const [sel, setSel] = useState(DEMO_DATA[0].id);
-  const selItem = DEMO_DATA.find((d) => d.id === sel);
+  const [sel, setSel] = useState(MAP_ITEMS[0]?.id ?? null);
+  const selItem = MAP_ITEMS.find((d) => d.id === sel) ?? null;
   const hasKakaoKey = !!process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
 
   return (
@@ -123,13 +133,13 @@ export default function MapPage() {
       {/* 지도 영역 */}
       {hasKakaoKey ? (
         <KakaoMap
-          items={DEMO_DATA}
+          items={MAP_ITEMS}
           selectedId={sel}
           onSelect={(item) => setSel(item.id)}
         />
       ) : (
         <MapCanvas style={{ position: 'absolute' }}>
-          {DEMO_DATA.map((item) => (
+          {MAP_ITEMS.map((item) => (
             <MapPin key={item.id} item={item} selected={item.id === sel} onClick={(it) => setSel(it.id)} />
           ))}
         </MapCanvas>

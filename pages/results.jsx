@@ -381,18 +381,12 @@ export default function ResultsPage() {
   const header = (
     <div style={{ paddingTop: 50, background: 'var(--bg)', boxShadow: '0 1px 0 rgba(0,0,0,0.03)' }}>
       <div style={{ padding: '6px 16px 0', display: 'flex', alignItems: 'center', gap: 4 }}>
-        <button onClick={() => router.push('/')} aria-label="back" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--ink-2)' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 5-7 7 7 7" /></svg>
-        </button>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>추천 지역</h1>
-        <span style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--ink-3)', fontWeight: 600 }}>
-          {loading ? '조회 중…' : `${filtered.length}곳 추천`}
-        </span>
         {/* 지도/목록 토글 버튼 */}
         <button
           onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
           style={{
-            marginLeft: 8, display: 'flex', alignItems: 'center', gap: 5,
+            marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
             padding: '7px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
             fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
             background: 'var(--surface)', color: 'var(--ink-2)',
@@ -401,6 +395,19 @@ export default function ResultsPage() {
           }}
         >
           {viewMode === 'list' ? <><IconMap size={15} /> 지도</> : <><IconList size={15} /> 목록</>}
+        </button>
+        {/* 닫기(홈으로) 버튼 */}
+        <button
+          onClick={() => router.push('/')}
+          aria-label="홈으로"
+          style={{
+            marginLeft: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 32, height: 32, borderRadius: 999, border: 'none', cursor: 'pointer',
+            background: 'var(--line)', color: 'var(--ink-2)',
+            flexShrink: 0,
+          }}
+        >
+          <IconClose size={18} />
         </button>
       </div>
       <FilterBar filters={filters} setFilters={setFilters} />
