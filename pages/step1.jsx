@@ -72,6 +72,7 @@ export default function Step1Page() {
         setApiError(null);
         setSuggestions(docs.map((d) => ({
           name: d.place_name || d.address_name,
+          address: d.place_name ? d.address_name : null,
           lat: parseFloat(d.y),
           lng: parseFloat(d.x),
         })));
@@ -166,8 +167,11 @@ export default function Step1Page() {
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px', cursor: 'pointer',
                       borderTop: i ? '1px solid var(--bg)' : 'none' }}
                   >
-                    <span style={{ color: 'var(--ink-3)', display: 'flex' }}><IconPin size={18} /></span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{s.name}</span>
+                    <span style={{ color: 'var(--ink-3)', display: 'flex', flexShrink: 0 }}><IconPin size={18} /></span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
+                      {s.address && <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.address}</span>}
+                    </div>
                   </div>
                 ))}
               </div>
