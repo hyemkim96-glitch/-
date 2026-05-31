@@ -303,8 +303,7 @@ function DetailStat({ icon, label, value, note }) {
 
 // ── ExpandedSheet ─────────────────────────────────────────────────
 function ExpandedSheet({ item, onClose }) {
-  // 직방 검색 URL — 동 이름 + 거래유형 검색어로 바로 연결
-  const zigbangSearchUrl = `https://www.zigbang.com/home/search?q=${encodeURIComponent(`${item.dong} ${item.type}`)}`;
+  const naverLandUrl = `https://land.naver.com/search/?query=${encodeURIComponent(`${item.dong} ${item.type} 원룸`)}`;
 
 
 
@@ -356,14 +355,14 @@ function ExpandedSheet({ item, onClose }) {
           )}
           <MiniMap item={item} />
           <div style={{ marginTop: 20 }}>
-            <a href={zigbangSearchUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+            <a href={naverLandUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
               <button style={{
                 width: '100%', height: 54, borderRadius: 14, border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 16, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                background: '#FF5A35', color: '#fff',
+                background: '#03C75A', color: '#fff',
               }}>
-                직방에서 {item.dong} {item.type} 보기 <IconExternal size={18} />
+                네이버 부동산에서 {item.dong} 보기 <IconExternal size={18} />
               </button>
             </a>
           </div>

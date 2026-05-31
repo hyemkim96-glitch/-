@@ -124,7 +124,7 @@ export default function Step1Page() {
   return (
     <Screen header={header} footer={footer}>
       <div style={{ padding: '14px 20px 8px' }}>
-        <h1 style={{ margin: '0 0 24px', fontSize: 23, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>기본 정보를<br />입력해주세요</h1>
+        <h1 style={{ margin: '0 0 24px', fontSize: 23, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>기본 정보를 입력해주세요</h1>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
           <MoneyField label="보유 자산" placeholder="예: 5,000" value={form.asset} onChange={(v) => updateForm({ asset: v })} />
           <MoneyField label="월 소득 (세후)" placeholder="예: 320" value={form.income} onChange={(v) => updateForm({ income: v })} />
