@@ -236,6 +236,38 @@ function ExpandedSheet({ item, onClose }) {
   );
 }
 
+// ── 카카오맵 기반 결과 지도 ────────────────────────────────────────
+function ResultsKakaoMap({ items, onExpand }) {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    function init() {
+      const kakao = window.kakao;
+      if (!kakao?.maps) return;
+      kakao.maps.load(() => {
+        const center = new kakao.maps.LatLng(37.5326, 126.9903);
+        const map = new kakao.maps.Map(containerRef.current, { center, level: 8 });
+        items.forEach((item) => {
+          if (!item.coords) return;
+          const pos = new kakao.maps.LatLng(item.coords.lat, item.coords.lng);
+          const fg = gradeColors(item.score).fg.replace('var(--accent)', '#3182F6').replace('var(--good)', '#15B97E').replace('var(--mid)', '#F59000');
+          const content = `<div onclick="void(0)" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:999px;white-space:nowrap;background:#fff;font-weight:700;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,0.16);font-family:Pretendard,sans-serif;cursor:pointer;">${item.dong}<span style="font-weight:800;color:${fg}">${item.score}</span></div>`;
+          const overlay = new kakao.maps.CustomOverlay({ position: pos, content, yAnchor: 1.3 });
+          overlay.setMap(map);
+        });
+      });
+    }
+    if (window.kakao?.maps) init();
+    else {
+      const t = setInterval(() => { if (window.kakao?.maps) { clearInterval(t); init(); } }, 200);
+      return () => clearInterval(t);
+    }
+  }, [items]);
+
+  return <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />;
+}
+
 // ── 핵심: 후보 지역을 사용자 입력 기반으로 스코어링 ────────────────
 async function buildResults({ asset, income, transport, workLat, workLng, loan, loanRate }) {
   const results = [];
@@ -382,20 +414,24 @@ export default function ResultsPage() {
     <div style={{ paddingTop: 50, background: 'var(--bg)', boxShadow: '0 1px 0 rgba(0,0,0,0.03)' }}>
       <div style={{ padding: '6px 16px 0', display: 'flex', alignItems: 'center', gap: 4 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>추천 지역</h1>
-        {/* 지도/목록 토글 버튼 */}
-        <button
-          onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
-          style={{
-            marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
-            padding: '7px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
-            background: 'var(--surface)', color: 'var(--ink-2)',
-            boxShadow: 'var(--card-shadow)',
-            transition: 'all .14s ease',
-          }}
-        >
-          {viewMode === 'list' ? <><IconMap size={15} /> 지도</> : <><IconList size={15} /> 목록</>}
-        </button>
+        {/* 지도/목록 토글 — 결과 있을 때만 표시 */}
+        {!loading && filtered.length > 0 && (
+          <button
+            onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+            style={{
+              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
+              padding: '7px 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+              background: 'var(--surface)', color: 'var(--ink-2)',
+              boxShadow: 'var(--card-shadow)',
+              transition: 'all .14s ease',
+            }}
+          >
+            {viewMode === 'list' ? <><IconMap size={15} /> 지도</> : <><IconList size={15} /> 목록</>}
+          </button>
+        )}
+        {/* 로딩 중에는 토글 자리 확보 */}
+        {(loading || filtered.length === 0) && <span style={{ marginLeft: 'auto' }} />}
         {/* 닫기(홈으로) 버튼 */}
         <button
           onClick={() => router.push('/')}
@@ -416,25 +452,34 @@ export default function ResultsPage() {
 
   // 지도 뷰
   if (viewMode === 'map') {
+    const hasKakaoKey = !!process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
     return (
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {header}
-        <div style={{ flex: 1, position: 'relative' }}>
-          <MapCanvas style={{ position: 'absolute' }}>
-            {filtered.map((item) => (
-              <div key={item.id} onClick={() => setExpanded(item)}
-                style={{ position: 'absolute', left: `${item.pin.x}%`, top: `${item.pin.y}%`,
-                  transform: 'translate(-50%,-100%)', cursor: 'pointer', zIndex: 3 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 999, whiteSpace: 'nowrap',
-                  background: 'var(--surface)', fontWeight: 700, fontSize: 13,
-                  boxShadow: '0 3px 10px rgba(0,0,0,0.16)' }}>
-                  {item.dong}
-                  <span style={{ fontWeight: 800, color: gradeColors(item.score).fg }}>{item.score}</span>
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          {hasKakaoKey
+            ? <ResultsKakaoMap items={filtered} onExpand={setExpanded} />
+            : (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 32px', textAlign: 'center', background: 'var(--bg)' }}>
+                <div style={{ width: 64, height: 64, borderRadius: 20, background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--card-shadow)' }}>
+                  <IconMap size={30} style={{ color: 'var(--ink-3)' }} />
                 </div>
-                <div style={{ width: 0, height: 0, margin: '0 auto', borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '7px solid var(--surface)' }} />
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--ink)' }}>지도를 표시할 수 없습니다</div>
+                <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6 }}>
+                  지도 기능은 카카오맵 API 키가 필요합니다.<br />
+                  Vercel 환경변수에<br />
+                  <code style={{ fontSize: 12, background: 'var(--line)', padding: '2px 6px', borderRadius: 4 }}>NEXT_PUBLIC_KAKAO_MAP_KEY</code><br />
+                  를 설정해주세요.
+                </p>
+                <button
+                  onClick={() => setViewMode('list')}
+                  style={{ marginTop: 4, padding: '10px 24px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, background: 'var(--accent)', color: '#fff' }}
+                >
+                  목록으로 돌아가기
+                </button>
               </div>
-            ))}
-          </MapCanvas>
+            )
+          }
         </div>
         {expanded && <ExpandedSheet item={expanded} onClose={() => setExpanded(null)} />}
       </div>
