@@ -321,4 +321,52 @@ export const CANDIDATE_REGIONS = [
     avgJeonsaMan: 9000, avgRentMan: 38,
     defaultLife: { subway: 1, store: 6, mart: 1, hospital: 3 },
   },
+  {
+    id: 'nowon_junggye', gu: '노원구', dong: '중계동',
+    lawdCd: '11350',
+    coords: { lat: 37.6363, lng: 127.0739 }, pin: { x: 70, y: 10 },
+    options: [
+      { type: '전세', depositMan: 10000 },
+      { type: '월세', depositForRent: 500, rentMan: 40 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 10000, avgRentMan: 40,
+    defaultLife: { subway: 2, store: 8, mart: 2, hospital: 5 },
+  },
+  {
+    id: 'nowon_sangye', gu: '노원구', dong: '상계동',
+    lawdCd: '11350',
+    coords: { lat: 37.6556, lng: 127.0636 }, pin: { x: 68, y: 6 },
+    options: [
+      { type: '전세', depositMan: 9000 },
+      { type: '월세', depositForRent: 500, rentMan: 36 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 9000, avgRentMan: 36,
+    defaultLife: { subway: 2, store: 7, mart: 2, hospital: 4 },
+  },
+  {
+    id: 'jungnang_myeongmok', gu: '중랑구', dong: '면목동',
+    lawdCd: '11260',
+    coords: { lat: 37.5844, lng: 127.0888 }, pin: { x: 74, y: 22 },
+    options: [
+      { type: '전세', depositMan: 8500 },
+      { type: '월세', depositForRent: 500, rentMan: 34 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 8500, avgRentMan: 34,
+    defaultLife: { subway: 1, store: 6, mart: 1, hospital: 3 },
+  },
+  {
+    id: 'dobong_ssangmun', gu: '도봉구', dong: '쌍문동',
+    lawdCd: '11320',
+    coords: { lat: 37.6486, lng: 127.0278 }, pin: { x: 58, y: 7 },
+    options: [
+      { type: '전세', depositMan: 9500 },
+      { type: '월세', depositForRent: 500, rentMan: 37 },
+    ],
+    maintenanceFee: 5,
+    avgJeonsaMan: 9500, avgRentMan: 37,
+    defaultLife: { subway: 1, store: 6, mart: 1, hospital: 3 },
+  },
 ];
