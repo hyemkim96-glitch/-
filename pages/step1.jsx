@@ -59,8 +59,9 @@ export default function Step1Page() {
   const [suggestions, setSuggestions] = useState([]);
   const [isFallback, setIsFallback] = useState(false);
   const [apiError, setApiError] = useState(null);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
   const debounceRef = useRef(null);
-  // mousedown 중인지 추적 — blur보다 먼저 발생하므로 dropdown 닫힘 방지
+  const inputRef = useRef(null);
   const selectingRef = useRef(false);
 
   useEffect(() => {
@@ -119,6 +120,10 @@ export default function Step1Page() {
   }
 
   function handleWorkFocus() {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropPos({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+    }
     setFocus(true);
     if (form.work && form.work.trim() && !form.workLat) fetchSuggestions(form.work);
   }
@@ -169,6 +174,7 @@ export default function Step1Page() {
                 <IconSearch size={20} />
               </span>
               <input
+                ref={inputRef}
                 value={form.work}
                 placeholder="회사 이름 또는 주소 검색"
                 onChange={(e) => handleWorkChange(e.target.value)}
@@ -181,7 +187,7 @@ export default function Step1Page() {
               />
             </div>
             {focus && suggestions.length > 0 && (
-              <div style={{ marginTop: 8, background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.1), 0 0 0 1px var(--line)' }}>
+              <div style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 100, background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.14), 0 0 0 1px var(--line)' }}>
                 {suggestions[0]?.noResult ? (
                   <div style={{ padding: '16px', fontSize: 14, fontWeight: 600, color: 'var(--ink-3)', textAlign: 'center' }}>
                     검색 결과가 없습니다.
