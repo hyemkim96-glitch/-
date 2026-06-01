@@ -75,3 +75,8 @@ input {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.4; }
 }
+
+/* 데스크톱에서 폰 프레임 둥근 모서리 */
+@media (min-width: 430px) {
+  .phone-frame { border-radius: 44px; }
+}
