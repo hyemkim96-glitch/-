@@ -55,10 +55,10 @@ export default function HistoryPage() {
   }
 
   const header = (
-    <div style={{ paddingTop: 60, padding: '60px 20px 14px' }}>
-      <h1 style={{ margin: 0, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.5px', lineHeight: '1.6', fontSize: '24px' }}>어디살까?</h1>
+    <div style={{ padding: '72px 20px 20px' }}>
+      <h1 style={{ margin: 0, fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.5px', lineHeight: '1.3', fontSize: '28px' }}>어디살까?</h1>
       {history.length > 0 && (
-        <p style={{ fontSize: 14, color: 'var(--ink-3)', fontWeight: 500, lineHeight: '1.6', margin: '0px' }}>조건을 선택하면 최신 시세로 재조회합니다</p>
+        <p style={{ fontSize: 14, color: 'var(--ink-3)', fontWeight: 500, lineHeight: '1.6', margin: '6px 0 0' }}>조건을 선택하면 최신 시세로 재조회합니다</p>
       )}
     </div>
   );
