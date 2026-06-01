@@ -460,7 +460,7 @@ function estimateCommute(km, transport) {
   return Math.round(km / 28 * 60 + 10);
 }
 
-async function buildResults({ asset, income, workLat, workLng, loan, loanRate }) {
+async function buildResults({ asset, income, workLat, workLng, loan, loanRate, transport }) {
   const wx = workLng || 126.9780;
   const wy = workLat || 37.5665;
 
@@ -522,6 +522,9 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate })
     // 생활권
     const life = facilityResults[idx] || region.defaultLife;
 
+    // 실거래가 있는지 여부 (없으면 fallback 값 사용)
+    const hasLiveData = !!priceBase;
+
     // 실거래가 기반 옵션으로 동적 생성
     const dynamicOptions = [
       { type: '전세', depositMan: liveJeonsa },
@@ -542,7 +545,8 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate })
 
       if (income > 0 && monthlyMan > income * MAX_AFFORDABLE_RATIO) continue;
 
-      const cs = commuteScore(transitMin);
+      const commuteMin = transport === '자가용' ? carMin : transitMin;
+      const cs = commuteScore(commuteMin);
       const ps = priceScore(monthlyMan, income);
       const ls = lifeScore(life, CANDIDATE_REGIONS.map((r) => r.defaultLife));
       const score = totalScore(cs, ps, ls);
@@ -556,6 +560,11 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate })
       const priceLabel = opt.type === '전세'
         ? formatKRW(deposit)
         : `보증금 ${formatKRW(opt.depositForRent || 0)} · 월 ${rentMan}만원`;
+      const avgLabel = hasLiveData
+        ? (opt.type === '전세'
+          ? formatKRW(liveJeonsa)
+          : `보증금 ${formatKRW(liveRentDep)} / 월 ${liveRent}만원`)
+        : null;
       const transitLabel = `🚇 ${transitMin}분${transitEstimated ? '*' : ''}`;
       const carLabel = `🚗 ${carMin}분${carEstimated ? '*' : ''}`;
 
@@ -569,15 +578,17 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate })
         depositMan: deposit,
         depositForRent: opt.depositForRent,
         priceLabel,
+        avgLabel,
         capitalMan,
         monthlyMan,
         commuteMin: transitMin,
+        sortMinute: commuteMin,
         transitLabel,
         carLabel,
         life,
         score,
         breakdown,
-        noData: false,
+        noData: !hasLiveData,
         needsLoan: deposit > asset,
       });
     }
@@ -616,6 +627,7 @@ export default function ResultsPage() {
       workLng: f.workLng || null,
       loan: true,
       loanRate: 3.5,
+      transport: p.transport || '대중교통',
     }).then((results) => {
       clearTimeout(slowTimer);
       setSlowWarning(false);
@@ -628,6 +640,7 @@ export default function ResultsPage() {
       if (isNewSearch && f.work && results.length > 0) {
         addHistory({
           id: `h_${Date.now()}`,
+          createdAt: Date.now(),
           region: `${results[0].gu} ${results[0].dong}`,
           count: results.length,
           work: f.work,
@@ -639,7 +652,6 @@ export default function ResultsPage() {
           monthlyMan: results[0].monthlyMan,
           housing: p.housing || '전월세',
           transport: p.transport || '대중교통',
-          ago: '방금',
         });
       }
     });
@@ -657,7 +669,7 @@ export default function ResultsPage() {
     })
     .sort((a, b) => {
       if (filters.sort === 'monthly') return a.monthlyMan - b.monthlyMan;
-      if (filters.sort === 'commute') return a.commuteMin - b.commuteMin;
+      if (filters.sort === 'commute') return a.sortMinute - b.sortMinute;
       return b.score - a.score; // 기본: 추천순
     });
 

@@ -9,16 +9,16 @@ export default async function handler(req, res) {
   }
 
   const categories = [
-    { code: 'SW8', field: 'subway' },  // 지하철역
-    { code: 'CS2', field: 'store' },   // 편의점
-    { code: 'MT1', field: 'mart' },    // 대형마트
-    { code: 'HP8', field: 'hospital' },// 병원
+    { code: 'SW8', field: 'subway',   radius: 800  }, // 지하철역
+    { code: 'CS2', field: 'store',    radius: 500  }, // 편의점
+    { code: 'MT1', field: 'mart',     radius: 1500 }, // 대형마트
+    { code: 'HP8', field: 'hospital', radius: 1000 }, // 병원
   ];
 
   try {
     const results = await Promise.all(
-      categories.map(async ({ code, field }) => {
-        const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${code}&x=${lng}&y=${lat}&radius=1000&size=15`;
+      categories.map(async ({ code, field, radius }) => {
+        const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${code}&x=${lng}&y=${lat}&radius=${radius}&size=15`;
         const r = await fetch(url, { headers: { Authorization: `KakaoAK ${key}` } });
         const data = await r.json();
         return { field, count: data.documents?.length || 0 };

@@ -9,6 +9,17 @@ import {
   IconHome, IconSearch, IconTrash, IconPlus, IconBuilding, IconWon,
 } from '../components/icons';
 
+function timeAgo(ts) {
+  if (!ts) return '방금';
+  const diff = Date.now() - ts;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return '방금';
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  return `${Math.floor(hr / 24)}일 전`;
+}
+
 export default function HistoryPage() {
   const router = useRouter();
   const [history, setHistory] = useState([]);
@@ -78,7 +89,7 @@ export default function HistoryPage() {
                     {h.count > 1 && <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-3)', flexShrink: 0 }}>외 {h.count - 1}곳</span>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                    <span style={{ fontSize: 12.5, color: 'var(--ink-3)', fontWeight: 500 }}>{h.ago}</span>
+                    <span style={{ fontSize: 12.5, color: 'var(--ink-3)', fontWeight: 500 }}>{timeAgo(h.createdAt)}</span>
                     <button onClick={(e) => { e.stopPropagation(); handleDelete(h.id); }}
                       style={{ border: 'none', background: 'transparent', color: 'var(--ink-3)', cursor: 'pointer', padding: 4, display: 'flex', borderRadius: 8 }}>
                       <IconTrash size={18} />
