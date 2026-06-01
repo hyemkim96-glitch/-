@@ -7,6 +7,7 @@ import { Button } from '../components/shared';
 import { Screen, Footer } from '../components/layout/Screen';
 import {
   IconHome, IconSearch, IconTrash, IconPlus, IconBuilding, IconWon,
+  IconSubway, IconWallet,
 } from '../components/icons';
 
 function timeAgo(ts) {
@@ -55,7 +56,7 @@ export default function HistoryPage() {
 
   const header = (
     <div style={{ paddingTop: 60, padding: '60px 20px 14px' }}>
-      <h1 style={{ margin: 0, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.5px', lineHeight: '1.6', fontSize: '24px' }}>직주근접</h1>
+      <h1 style={{ margin: 0, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.5px', lineHeight: '1.6', fontSize: '24px' }}>어디살까?</h1>
       {history.length > 0 && (
         <p style={{ fontSize: 14, color: 'var(--ink-3)', fontWeight: 500, lineHeight: '1.6', margin: '0px' }}>조건을 선택하면 최신 시세로 재조회합니다</p>
       )}
@@ -74,19 +75,19 @@ export default function HistoryPage() {
         {history.length === 0 ? (
           <div style={{ padding: '4px 20px 32px' }}>
             <div style={{ fontSize: 30, fontWeight: 900, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1.2 }}>
-              내 월급으로<br />살 수 있는<br />최고의 집
+              퇴근하면<br />집이 가까운<br />동네
             </div>
             <p style={{ marginTop: 14, fontSize: 14.5, fontWeight: 500, color: 'var(--ink-3)', lineHeight: 1.65, margin: '14px 0 0' }}>
-              직장까지 가장 가까운 동네를<br />실거래가 기준으로 추천해드려요
+              직장·예산·교통수단 입력 한 번으로<br />딱 맞는 동네를 찾아드려요
             </p>
             <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { label: '직주근접 최우선', desc: '출퇴근 시간이 짧은 동네를 먼저 추천' },
-                { label: '국토부 실거래가', desc: '최근 3개월 평균 시세 기준' },
-                { label: '예산 맞춤 필터', desc: '자산·월급에 맞는 집만 골라드려요' },
+                { icon: <IconSubway size={18} />, label: '출퇴근 시간 최우선', desc: '가까운 동네부터 순서대로 추천' },
+                { icon: <IconWon size={18} />,    label: '국토부 실거래가 기준', desc: '최근 3개월 전·월세 평균 시세' },
+                { icon: <IconWallet size={18} />, label: '예산 맞춤 추천', desc: '자산·월급 기준으로 감당 가능한 집만' },
               ].map((f) => (
                 <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', borderRadius: 14, padding: '14px 16px', boxShadow: 'var(--card-shadow)' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 999, background: 'var(--accent)', flexShrink: 0 }} />
+                  <div style={{ color: 'var(--accent)', display: 'flex', flexShrink: 0 }}>{f.icon}</div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{f.label}</div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-3)', marginTop: 2 }}>{f.desc}</div>
