@@ -450,24 +450,69 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 직선거리 기반 출퇴근 시간 추정 (서울 교통 현실 반영)
+// 직선거리 기반 출퇴근 시간 추정 (전국 평균 속도 기준)
 function estimateCommute(km, transport) {
-  if (transport === '자가용') {
-    // 서울 자가용: 평균 시속 18km (신호, 정체 반영) + 주차 이동 5분
-    return Math.round(km / 18 * 60 + 5);
-  }
-  // 대중교통: 도보+대기 10분 + 평균 시속 28km
-  return Math.round(km / 28 * 60 + 10);
+  if (transport === '자가용') return Math.round(km / 25 * 60 + 5);
+  return Math.round(km / 25 * 60 + 10);
+}
+
+// 시세 데이터 없을 때 시도별 평균 fallback (만원)
+function regionalFallback(sido) {
+  if (sido === '서울특별시')
+    return { jeonsaMan: 25000, rentMan: 60, rentDepMan: 2500 };
+  if (sido === '경기도')
+    return { jeonsaMan: 18000, rentMan: 45, rentDepMan: 1800 };
+  if (['부산광역시','대구광역시','인천광역시','광주광역시','대전광역시','울산광역시','세종특별자치시'].includes(sido))
+    return { jeonsaMan: 12000, rentMan: 35, rentDepMan: 1200 };
+  return { jeonsaMan: 7000, rentMan: 25, rentDepMan: 700 };
+}
+
+// JSON 지역 → 앱 포맷 변환
+function normalizeRegion(r) {
+  return {
+    id: r.code || r.id,
+    gu: r.sigungu || r.gu,
+    dong: r.dong,
+    sido: r.sido || '',
+    lawdCd: r.lawdCd,
+    coords: r.coords || { lat: r.lat, lng: r.lng },
+    pin: r.pin || { x: 50, y: 50 },
+    maintenanceFee: r.maintenanceFee || 10,
+    avgJeonsaMan: r.avgJeonsaMan || null,
+    avgRentMan: r.avgRentMan || null,
+    defaultLife: r.defaultLife || { subway: 1, store: 3, mart: 1, hospital: 2 },
+  };
 }
 
 async function buildResults({ asset, income, workLat, workLng, loan, loanRate, transport }) {
   const wx = workLng || 126.9780;
   const wy = workLat || 37.5665;
 
-  const uniqueLawdCds = [...new Set(CANDIDATE_REGIONS.map((r) => r.lawdCd).filter(Boolean))];
+  // 전국 데이터가 있으면 사용, 없으면 CANDIDATE_REGIONS fallback
+  let candidatePool;
+  try {
+    const regRes = await fetch('/api/regions');
+    const regData = await regRes.json();
+    if (regData.nationwide && regData.regions.length > 0) {
+      candidatePool = regData.regions
+        .map(normalizeRegion)
+        .filter((r) => haversineKm(wy, wx, r.coords.lat, r.coords.lng) <= 65)
+        .sort((a, b) =>
+          haversineKm(wy, wx, a.coords.lat, a.coords.lng) -
+          haversineKm(wy, wx, b.coords.lat, b.coords.lng)
+        )
+        .slice(0, 60);
+    } else {
+      candidatePool = CANDIDATE_REGIONS.map(normalizeRegion);
+    }
+  } catch {
+    candidatePool = CANDIDATE_REGIONS.map(normalizeRegion);
+  }
 
-  const fetchCommute = (region, transport) =>
-    fetch(`/api/commute?ox=${wx}&oy=${wy}&dx=${region.coords.lng}&dy=${region.coords.lat}&transport=${encodeURIComponent(transport)}`)
+  const uniqueLawdCds = [...new Set(candidatePool.map((r) => r.lawdCd).filter(Boolean))];
+
+  const fetchCommute = (region, t) =>
+    fetch(`/api/commute?ox=${wx}&oy=${wy}&dx=${region.coords.lng}&dy=${region.coords.lat}&transport=${encodeURIComponent(t)}`)
       .then((r) => r.json())
       .catch(() => null);
 
@@ -479,9 +524,9 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       } catch {}
       return [lawdCd, null];
     })),
-    Promise.all(CANDIDATE_REGIONS.map((region) => fetchCommute(region, '대중교통'))),
-    Promise.all(CANDIDATE_REGIONS.map((region) => fetchCommute(region, '자가용'))),
-    Promise.all(CANDIDATE_REGIONS.map(async (region) => {
+    Promise.all(candidatePool.map((region) => fetchCommute(region, '대중교통'))),
+    Promise.all(candidatePool.map((region) => fetchCommute(region, '자가용'))),
+    Promise.all(candidatePool.map(async (region) => {
       try {
         const r = await fetch(`/api/facilities?lat=${region.coords.lat}&lng=${region.coords.lng}`);
         const apiLife = await r.json();
@@ -496,14 +541,17 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
   const priceCache = Object.fromEntries(priceResults);
 
   const results = [];
-  CANDIDATE_REGIONS.forEach((region, idx) => {
-    // 실거래가로 시세 업데이트 — 동 단위 우선, 없으면 구 평균 fallback
+  candidatePool.forEach((region, idx) => {
+    // 실거래가 — 동 단위 → 구 평균 → 시도별 fallback 순으로 적용
     const live = region.lawdCd ? priceCache[region.lawdCd] : null;
     const dongStats = live?.byDong?.[region.dong] || null;
     const priceBase = dongStats || live?.oneroom || null;
-    const liveJeonsa = priceBase?.jeonsa || region.avgJeonsaMan;
-    const liveRent   = priceBase?.wolseRent || region.avgRentMan;
-    const liveRentDep = priceBase?.wolseDeposit || Math.round(liveJeonsa * 0.1);
+    const fb = regionalFallback(region.sido);
+    const liveJeonsa  = priceBase?.jeonsa     || region.avgJeonsaMan || fb.jeonsaMan;
+    const liveRent    = priceBase?.wolseRent  || region.avgRentMan   || fb.rentMan;
+    const liveRentDep = priceBase?.wolseDeposit || region.avgJeonsaMan
+      ? Math.round(liveJeonsa * 0.1)
+      : fb.rentDepMan;
 
     // 출퇴근 (대중교통 + 자가용)
     const km = haversineKm(wy, wx, region.coords.lat, region.coords.lng);
