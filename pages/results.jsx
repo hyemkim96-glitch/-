@@ -594,7 +594,10 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     }
   });
 
-  results.sort((a, b) => b.score - a.score);
+  results.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.sortMinute - b.sortMinute; // 점수 동일 시 가까운 순
+  });
   return results;
 }
 
@@ -670,7 +673,8 @@ export default function ResultsPage() {
     .sort((a, b) => {
       if (filters.sort === 'monthly') return a.monthlyMan - b.monthlyMan;
       if (filters.sort === 'commute') return a.sortMinute - b.sortMinute;
-      return b.score - a.score; // 기본: 추천순
+      if (b.score !== a.score) return b.score - a.score;
+      return a.sortMinute - b.sortMinute; // 추천순 동점 시 가까운 순
     });
 
   const header = (
