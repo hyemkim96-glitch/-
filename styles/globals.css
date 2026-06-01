@@ -76,6 +76,11 @@ input {
   50%       { opacity: 0.4; }
 }
 
+@keyframes fadeUp {
+  from { transform: translateY(14px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
 /* 데스크톱에서 폰 프레임 둥근 모서리 */
 @media (min-width: 430px) {
   .phone-frame { border-radius: 44px; }

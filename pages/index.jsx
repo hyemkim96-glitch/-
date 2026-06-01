@@ -55,7 +55,7 @@ export default function HistoryPage() {
   }
 
   const header = (
-    <div style={{ padding: '72px 20px 20px' }}>
+    <div style={{ padding: '72px 20px 20px', animation: 'fadeUp 0.4s ease both' }}>
       <h1 style={{ margin: 0, fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.5px', lineHeight: '1.3', fontSize: '28px' }}>어디살까?</h1>
       {history.length > 0 && (
         <p style={{ fontSize: 14, color: 'var(--ink-3)', fontWeight: 500, lineHeight: '1.6', margin: '6px 0 0' }}>조건을 선택하면 최신 시세로 재조회합니다</p>
@@ -74,10 +74,10 @@ export default function HistoryPage() {
       <Screen header={header} footer={footer}>
         {history.length === 0 ? (
           <div style={{ padding: '4px 20px 32px' }}>
-            <div style={{ fontSize: 30, fontWeight: 900, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1.2 }}>
+            <div style={{ fontSize: 30, fontWeight: 900, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1.2, animation: 'fadeUp 0.4s ease both', animationDelay: '0.05s' }}>
               퇴근하면<br />집이 가까운<br />동네
             </div>
-            <p style={{ marginTop: 14, fontSize: 14.5, fontWeight: 500, color: 'var(--ink-3)', lineHeight: 1.65, margin: '14px 0 0' }}>
+            <p style={{ marginTop: 14, fontSize: 14.5, fontWeight: 500, color: 'var(--ink-3)', lineHeight: 1.65, margin: '14px 0 0', animation: 'fadeUp 0.4s ease both', animationDelay: '0.12s' }}>
               직장·예산·교통수단 입력 한 번으로<br />딱 맞는 동네를 찾아드려요
             </p>
             <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -85,8 +85,8 @@ export default function HistoryPage() {
                 { icon: <IconSubway size={18} />, label: '출퇴근 시간 최우선', desc: '직장에서 가까운 동네를 먼저 보여드려요' },
                 { icon: <IconWon size={18} />,    label: '국토부 실거래가 기준', desc: '최근 3개월 실거래 평균가로 계산해요' },
                 { icon: <IconWallet size={18} />, label: '예산 맞춤 추천', desc: '자산과 월급에 맞는 집만 골라드려요' },
-              ].map((f) => (
-                <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', borderRadius: 14, padding: '14px 16px', boxShadow: 'var(--card-shadow)' }}>
+              ].map((f, i) => (
+                <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', borderRadius: 14, padding: '14px 16px', boxShadow: 'var(--card-shadow)', animation: 'fadeUp 0.4s ease both', animationDelay: `${0.2 + i * 0.07}s` }}>
                   <div style={{ color: 'var(--accent)', display: 'flex', flexShrink: 0 }}>{f.icon}</div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{f.label}</div>
@@ -98,9 +98,9 @@ export default function HistoryPage() {
           </div>
         ) : (
           <div style={{ padding: '4px 20px 8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {history.map((h) => (
+            {history.map((h, i) => (
               <div key={h.id} onClick={() => handleRerun(h)}
-                style={{ background: 'var(--surface)', cursor: 'pointer', boxShadow: 'var(--card-shadow)', borderRadius: '16px', padding: '16px' }}>
+                style={{ background: 'var(--surface)', cursor: 'pointer', boxShadow: 'var(--card-shadow)', borderRadius: '16px', padding: '16px', animation: 'fadeUp 0.35s ease both', animationDelay: `${i * 0.06}s` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--accent)', minWidth: 0 }}>
                     <IconHome size={19} />

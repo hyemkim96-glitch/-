@@ -178,9 +178,9 @@ function MiniStat({ icon, label, value }) {
 }
 
 // ── ResultCard ────────────────────────────────────────────────────
-function ResultCard({ item, onExpand }) {
+function ResultCard({ item, onExpand, index = 0 }) {
   return (
-    <div onClick={() => onExpand(item)} style={{ background: 'var(--surface)', borderRadius: 16, padding: 18, cursor: 'pointer', boxShadow: 'var(--card-shadow)' }}>
+    <div onClick={() => onExpand(item)} style={{ background: 'var(--surface)', borderRadius: 16, padding: 18, cursor: 'pointer', boxShadow: 'var(--card-shadow)', animation: 'fadeUp 0.35s ease both', animationDelay: `${Math.min(index, 7) * 0.055}s` }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <span style={{ color: 'var(--ink-3)', display: 'flex', flexShrink: 0 }}><IconHome size={17} /></span>
@@ -674,7 +674,7 @@ export default function ResultsPage() {
     });
 
   const header = (
-    <div style={{ paddingTop: 50, background: 'var(--bg)', boxShadow: '0 1px 0 rgba(0,0,0,0.03)' }}>
+    <div style={{ paddingTop: 50, background: 'var(--bg)', boxShadow: '0 1px 0 rgba(0,0,0,0.03)', animation: 'fadeUp 0.35s ease both' }}>
       <div style={{ padding: '6px 16px 0', display: 'flex', alignItems: 'center', gap: 4 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>추천 지역</h1>
         <span style={{ marginLeft: 'auto' }} />
@@ -765,7 +765,7 @@ export default function ResultsPage() {
                     <p style={{ marginTop: 8, fontSize: 14 }}>대출 포함 시 더 많은 결과를 볼 수 있습니다</p>
                   </div>
                 )
-                : filtered.map((item) => <ResultCard key={item.id} item={item} onExpand={setExpanded} />)
+                : filtered.map((item, i) => <ResultCard key={item.id} item={item} onExpand={setExpanded} index={i} />)
             }
             {!loading && filtered.some((i) => i.transitLabel?.includes('*') || i.carLabel?.includes('*')) && (
               <p style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', margin: '4px 0 8px' }}>
