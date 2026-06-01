@@ -88,8 +88,13 @@ function WorkSearchModal({ onSelect, onClose }) {
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
       {/* 헤더 */}
       <div style={{ paddingTop: 50, padding: '50px 16px 0' }}>
-        <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em', marginBottom: 14 }}>직장 주소 검색</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>직장 주소 검색</span>
+          <button onClick={onClose} style={{ background: 'var(--line)', border: 'none', cursor: 'pointer', borderRadius: 999, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)' }}>
+            <IconClose size={18} />
+          </button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-3)', display: 'flex' }}>
               <IconSearch size={20} />
@@ -111,10 +116,6 @@ function WorkSearchModal({ onSelect, onClose }) {
               </button>
             )}
           </div>
-          <button onClick={onClose}
-            style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 700, color: 'var(--ink-2)', padding: '8px 4px' }}>
-            취소
-          </button>
         </div>
       </div>
 
