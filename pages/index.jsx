@@ -82,15 +82,15 @@ export default function HistoryPage() {
             </p>
             <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { icon: <IconSubway size={18} />, label: '출퇴근 시간 최우선', desc: '직장에서 가까운 동네를 먼저 보여드려요' },
-                { icon: <IconWon size={18} />,    label: '국토부 실거래가 기준', desc: '최근 3개월 실거래 평균가로 계산해요' },
-                { icon: <IconWallet size={18} />, label: '예산 맞춤 추천', desc: '자산과 월급에 맞는 집만 골라드려요' },
+                { icon: <IconSubway size={24} />, label: '출퇴근 시간 최우선', desc: '직장에서 가까운 동네를 먼저 보여드려요' },
+                { icon: <IconWon size={24} />,    label: '국토부 실거래가 기준', desc: '최근 3개월 실거래 평균가로 계산해요' },
+                { icon: <IconWallet size={24} />, label: '예산 맞춤 추천', desc: '자산과 월급에 맞는 집만 골라드려요' },
               ].map((f, i) => (
-                <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', borderRadius: 14, padding: '14px 16px', boxShadow: 'var(--card-shadow)', animation: 'fadeUp 0.4s ease both', animationDelay: `${0.2 + i * 0.07}s` }}>
-                  <div style={{ color: 'var(--accent)', display: 'flex', flexShrink: 0 }}>{f.icon}</div>
+                <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', borderRadius: 16, padding: '14px 16px', boxShadow: 'var(--card-shadow)', animation: 'fadeUp 0.4s ease both', animationDelay: `${0.2 + i * 0.07}s` }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 13, background: 'var(--accent-weak)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{f.icon}</div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{f.label}</div>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-3)', marginTop: 2 }}>{f.desc}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-3)', marginTop: 3 }}>{f.desc}</div>
                   </div>
                 </div>
               ))}
