@@ -82,9 +82,9 @@ export default function HistoryPage() {
             </p>
             <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { icon: <IconSubway size={18} />, label: '출퇴근 시간 최우선', desc: '가까운 동네부터 순서대로 추천' },
-                { icon: <IconWon size={18} />,    label: '국토부 실거래가 기준', desc: '최근 3개월 전·월세 평균 시세' },
-                { icon: <IconWallet size={18} />, label: '예산 맞춤 추천', desc: '자산·월급 기준으로 감당 가능한 집만' },
+                { icon: <IconSubway size={18} />, label: '출퇴근 시간 최우선', desc: '직장에서 가까운 동네를 먼저 보여드려요' },
+                { icon: <IconWon size={18} />,    label: '국토부 실거래가 기준', desc: '최근 3개월 실거래 평균가로 계산해요' },
+                { icon: <IconWallet size={18} />, label: '예산 맞춤 추천', desc: '자산과 월급에 맞는 집만 골라드려요' },
               ].map((f) => (
                 <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--surface)', borderRadius: 14, padding: '14px 16px', boxShadow: 'var(--card-shadow)' }}>
                   <div style={{ color: 'var(--accent)', display: 'flex', flexShrink: 0 }}>{f.icon}</div>
