@@ -208,11 +208,18 @@ export default function Step1Page() {
             <MoneyField label="보유 자산" placeholder="예: 5,000" value={form.asset} onChange={(v) => updateForm({ asset: v })} />
             <MoneyField label="월 소득 (세후)" placeholder="예: 320" value={form.income} onChange={(v) => updateForm({ income: v })} />
             <div>
-              <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-2)' }}>직장 주소</label>
-              <div style={{ marginTop: 9 }}
-                onClick={() => setSearchOpen(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
+                <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-2)' }}>직장 주소</label>
+                {form.work && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ color: 'var(--accent)', display: 'flex' }}><IconPin size={15} /></span>
+                    <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink-2)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.work}</span>
+                  </div>
+                )}
+              </div>
+              <div onClick={() => setSearchOpen(true)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', borderRadius: 14,
-                  padding: '15px 16px', cursor: 'pointer', boxShadow: 'inset 0 0 0 1.5px var(--line)' }}>
+                  padding: '15px 16px', cursor: 'pointer', boxShadow: `inset 0 0 0 1.5px ${form.work ? 'var(--accent)' : 'var(--line)'}` }}>
                   <span style={{ color: 'var(--ink-3)', display: 'flex', flexShrink: 0 }}><IconSearch size={20} /></span>
                   {form.work
                     ? <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', flex: 1 }}>{form.work}</span>
