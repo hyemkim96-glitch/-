@@ -8,7 +8,6 @@ async function fetchAll(url) {
   try {
     const r = await fetch(url);
     const text = await r.text();
-    // XML 응답 파싱
     const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
       const get = (tag) => {
         const match = m[1].match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
@@ -19,6 +18,7 @@ async function fetchAll(url) {
         rent: parseInt(get('월세금액').replace(/,/g, '') || get('월세').replace(/,/g, '') || '0', 10),
         area: parseFloat(get('전용면적') || '0'),
         type: get('건물유형') || '',
+        dong: (get('법정동') || get('법정동명') || '').trim(),
       };
     });
     return items;
@@ -82,19 +82,35 @@ export default async function handler(req, res) {
   const jeonsaItems = (arr) => arr.filter((i) => i.rent === 0 && i.deposit > 0);
   const wolseItems  = (arr) => arr.filter((i) => i.rent > 0);
 
+  const oneroomStats = (arr) => ({
+    jeonsa: avg(jeonsaItems(arr).map((i) => Math.round(i.deposit / 10000))),
+    wolseDeposit: avg(wolseItems(arr).map((i) => Math.round(i.deposit / 10000))),
+    wolseRent: avg(wolseItems(arr).map((i) => i.rent)),
+    count: arr.length,
+  });
+
+  // 동별 원룸 시세 분류 (법정동명 기준)
+  const dongMap = {};
+  oneroom.forEach((item) => {
+    if (!item.dong) return;
+    // "합정", "합정동" 등 모두 "합정동"으로 정규화
+    const key = item.dong.endsWith('동') ? item.dong : item.dong + '동';
+    if (!dongMap[key]) dongMap[key] = [];
+    dongMap[key].push(item);
+  });
+  const byDong = Object.fromEntries(
+    Object.entries(dongMap).map(([dong, items]) => [dong, oneroomStats(items)])
+  );
+
   res.json({
-    oneroom: {
-      jeonsa: avg(jeonsaItems(oneroom).map((i) => Math.round(i.deposit / 10000))),
-      wolseDeposit: avg(wolseItems(oneroom).map((i) => Math.round(i.deposit / 10000))),
-      wolseRent: avg(wolseItems(oneroom).map((i) => i.rent)),
-      count: oneroom.length,
-    },
+    oneroom: oneroomStats(oneroom),
     tworoom: {
       jeonsa: avg(jeonsaItems(tworoom).map((i) => Math.round(i.deposit / 10000))),
       wolseDeposit: avg(wolseItems(tworoom).map((i) => Math.round(i.deposit / 10000))),
       wolseRent: avg(wolseItems(tworoom).map((i) => i.rent)),
       count: tworoom.length,
     },
+    byDong,
     months,
     total: allItems.length,
   });

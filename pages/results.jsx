@@ -497,11 +497,13 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate })
 
   const results = [];
   CANDIDATE_REGIONS.forEach((region, idx) => {
-    // 실거래가로 시세 업데이트 (있을 때만)
+    // 실거래가로 시세 업데이트 — 동 단위 우선, 없으면 구 평균 fallback
     const live = region.lawdCd ? priceCache[region.lawdCd] : null;
-    const liveJeonsa = live?.oneroom?.jeonsa || region.avgJeonsaMan;
-    const liveRent   = live?.oneroom?.wolseRent || region.avgRentMan;
-    const liveRentDep = live?.oneroom?.wolseDeposit || Math.round(liveJeonsa * 0.1);
+    const dongStats = live?.byDong?.[region.dong] || null;
+    const priceBase = dongStats || live?.oneroom || null;
+    const liveJeonsa = priceBase?.jeonsa || region.avgJeonsaMan;
+    const liveRent   = priceBase?.wolseRent || region.avgRentMan;
+    const liveRentDep = priceBase?.wolseDeposit || Math.round(liveJeonsa * 0.1);
 
     // 출퇴근 (대중교통 + 자가용)
     const km = haversineKm(wy, wx, region.coords.lat, region.coords.lng);
