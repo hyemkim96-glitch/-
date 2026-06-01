@@ -34,7 +34,6 @@ export default function HistoryPage() {
       workLng: h.workLng || null,
     });
     setPrefsData({ housing: h.housing === '매매' ? '전월세' : h.housing, homeType: '무관', transport: h.transport });
-    sessionStorage.setItem('zipter_new_search', '1');
     router.push('/results');
   }
 
