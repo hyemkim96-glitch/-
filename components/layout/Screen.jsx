@@ -20,11 +20,10 @@ export function Footer({ children }) {
   );
 }
 
-export function ProgressHead({ step, onBack }) {
-  const pct = step === 1 ? 50 : 100;
+export function ProgressHead({ onBack }) {
   return (
     <div style={{ paddingTop: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 16px 8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '4px 16px 8px' }}>
         <button
           onClick={onBack}
           aria-label="back"
@@ -34,13 +33,6 @@ export function ProgressHead({ step, onBack }) {
             <path d="m15 5-7 7 7 7" />
           </svg>
         </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 14 }}>
-          <span style={{ color: 'var(--accent)' }}>{step}</span>
-          <span style={{ color: 'var(--ink-3)' }}>/ 2</span>
-        </div>
-      </div>
-      <div style={{ height: 4, background: 'var(--line)', position: 'relative' }}>
-        <div style={{ position: 'absolute', inset: 0, width: `${pct}%`, background: 'var(--accent)', borderRadius: '0 4px 4px 0', transition: 'width .3s ease' }} />
       </div>
     </div>
   );

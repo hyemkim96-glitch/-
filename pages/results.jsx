@@ -333,7 +333,7 @@ function ExpandedSheet({ item, onClose, myAsset }) {
             <IconClose size={20} />
           </button>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 24px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-2)', background: 'var(--bg)', padding: '3px 9px', borderRadius: 6 }}>{item.type}</span>
             <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{item.priceLabel}</span>
@@ -376,18 +376,18 @@ function ExpandedSheet({ item, onClose, myAsset }) {
             </>
           )}
           <MiniMap item={item} />
-          <div style={{ marginTop: 20 }}>
-            <a href={dabangUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-              <button style={{
-                width: '100%', height: 54, borderRadius: 14, border: 'none', cursor: 'pointer',
-                fontFamily: 'inherit', fontSize: 16, fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                background: '#FF4076', color: '#fff',
-              }}>
-다방에서 {item.dong} 매물 보기 <IconExternal size={18} />
-              </button>
-            </a>
-          </div>
+        </div>
+        <div style={{ padding: '12px 20px 24px', background: 'var(--surface)', borderTop: '1px solid var(--line)' }}>
+          <a href={dabangUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+            <button style={{
+              width: '100%', height: 54, borderRadius: 14, border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 16, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              background: 'var(--accent)', color: '#fff',
+            }}>
+              다방에서 바로보기 <IconExternal size={18} />
+            </button>
+          </a>
         </div>
       </div>
     </div>
@@ -727,7 +727,7 @@ export default function ResultsPage() {
   // 목록 뷰
   return (
     <>
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {header}
         <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {slowWarning && loading && (
@@ -755,18 +755,26 @@ export default function ResultsPage() {
                 * 출퇴근 시간은 직선거리 기반 추정값입니다
               </p>
             )}
+            {!loading && filtered.length > 0 && <div style={{ height: 80 }} />}
           </div>
         </div>
-        {/* 하단 지도 토글 */}
+        {/* 지도로 보기 FAB */}
         {!loading && filtered.length > 0 && (
-          <div style={{ padding: '12px 20px 28px', background: 'var(--bg)' }}>
-            <button
-              onClick={() => setViewMode('map')}
-              style={{ width: '100%', height: 50, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'var(--surface)', color: 'var(--ink-2)', boxShadow: 'var(--card-shadow)' }}
-            >
-              <IconMap size={17} /> 지도로 보기
-            </button>
-          </div>
+          <button
+            onClick={() => setViewMode('map')}
+            aria-label="지도로 보기"
+            style={{
+              position: 'absolute', bottom: 24, right: 20,
+              width: 52, height: 52, borderRadius: 999,
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--surface)', color: 'var(--ink-2)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.16)',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            <IconMap size={22} />
+          </button>
         )}
       </div>
       {expanded && <ExpandedSheet item={expanded} onClose={() => setExpanded(null)} myAsset={myAsset} />}

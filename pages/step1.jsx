@@ -176,7 +176,7 @@ export default function Step1Page() {
   }
 
   function handleSelect(s) {
-    updateForm({ work: s.name, workLat: s.lat, workLng: s.lng });
+    updateForm({ work: s.name, workAddress: s.address, workLat: s.lat, workLng: s.lng });
     setSearchOpen(false);
   }
 
@@ -208,14 +208,9 @@ export default function Step1Page() {
             <MoneyField label="보유 자산" placeholder="예: 5,000" value={form.asset} onChange={(v) => updateForm({ asset: v })} />
             <MoneyField label="월 소득 (세후)" placeholder="예: 320" value={form.income} onChange={(v) => updateForm({ income: v })} />
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
-                <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-2)' }}>직장 주소</label>
-                {form.work && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ color: 'var(--accent)', display: 'flex' }}><IconPin size={15} /></span>
-                    <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink-2)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.work}</span>
-                  </div>
-                )}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 9 }}>
+                <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-2)', flexShrink: 0 }}>직장 주소</label>
+                {form.work && <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.workAddress || form.work}</span>}
               </div>
               <div onClick={() => setSearchOpen(true)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', borderRadius: 14,
