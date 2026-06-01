@@ -26,7 +26,13 @@ export default function HistoryPage() {
   function handleRerun(h) {
     setToast(true);
     setTimeout(() => setToast(false), 2500);
-    setFormData({ asset: String(h.asset).replace(/[^\d]/g, ''), income: '', work: h.work });
+    setFormData({
+      asset: String(h.asset).replace(/[^\d]/g, ''),
+      income: h.income || '',
+      work: h.work,
+      workLat: h.workLat || null,
+      workLng: h.workLng || null,
+    });
     setPrefsData({ housing: h.housing === '매매' ? '전월세' : h.housing, homeType: '무관', transport: h.transport });
     sessionStorage.setItem('zipter_new_search', '1');
     router.push('/results');
