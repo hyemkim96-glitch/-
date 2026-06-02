@@ -592,12 +592,12 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     if (regData.nationwide && regData.regions.length > 0) {
       candidatePool = regData.regions
         .map(normalizeRegion)
-        .filter((r) => haversineKm(wy, wx, r.coords.lat, r.coords.lng) <= 65)
+        .filter((r) => haversineKm(wy, wx, r.coords.lat, r.coords.lng) <= 45)
         .sort((a, b) =>
           haversineKm(wy, wx, a.coords.lat, a.coords.lng) -
           haversineKm(wy, wx, b.coords.lat, b.coords.lng)
         )
-        .slice(0, 60);
+        .slice(0, 35);
     } else {
       candidatePool = CANDIDATE_REGIONS.map(normalizeRegion);
     }
@@ -644,6 +644,12 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
 
   const priceResults = await priceResultsPromise;
   const priceCache = Object.fromEntries(priceResults);
+
+  // 가격 API 성공률 확인 — 절반 이상 실패하면 에러
+  const priceSuccessCount = priceResults.filter(([, v]) => v !== null).length;
+  if (priceResults.length > 0 && priceSuccessCount < priceResults.length * 0.5) {
+    throw new Error('PRICE_API_FAILED');
+  }
 
   // byDong 조회: 정확 매칭 → 접두사 매칭(가/숫자 결미 동명 대응) → null
   function findDongStats(byDong, dongName) {
@@ -722,6 +728,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       const ps = priceScore(monthlyMan, income);
       const ls = lifeScore(life, CANDIDATE_REGIONS.map((r) => r.defaultLife));
       const score = totalScore(cs, ps, ls);
+      if (score < 40) continue;
 
       const breakdown = {
         commute: Math.round(cs * 100),
@@ -784,6 +791,7 @@ export default function ResultsPage() {
   const [filters, setFilters] = useState({ type: '전체', home: '무관', loan: false, floor: '전체', sort: 'score' });
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [slowWarning, setSlowWarning] = useState(false);
   const [allResults, setAllResults] = useState([]);
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
@@ -834,6 +842,11 @@ export default function ResultsPage() {
           transport: p.transport || '대중교통',
         });
       }
+    }).catch((err) => {
+      clearTimeout(slowTimer);
+      setSlowWarning(false);
+      setLoadError(err.message || 'UNKNOWN');
+      setLoading(false);
     });
 
     return () => clearTimeout(slowTimer);
@@ -933,6 +946,32 @@ export default function ResultsPage() {
       <FilterBar filters={filters} setFilters={setFilters} />
     </div>
   );
+
+  // API 실패 에러 화면
+  if (loadError) {
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 32px', textAlign: 'center', background: 'var(--bg)' }}>
+        <div style={{ fontSize: 40 }}>⚠️</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--ink)' }}>데이터 요청에 실패했습니다</div>
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-3)', lineHeight: 1.7 }}>
+          시세 데이터를 불러오지 못했습니다.<br />
+          잠시 후 다시 시도해주세요.
+        </p>
+        <button
+          onClick={() => { setLoadError(null); setLoading(true); router.replace('/results'); }}
+          style={{ marginTop: 8, padding: '12px 28px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, background: 'var(--accent)', color: '#fff' }}
+        >
+          다시 시도
+        </button>
+        <button
+          onClick={() => router.push('/')}
+          style={{ padding: '10px 20px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, background: 'var(--surface)', color: 'var(--ink-2)' }}
+        >
+          홈으로
+        </button>
+      </div>
+    );
+  }
 
   // 지도 뷰
   if (viewMode === 'map') {
