@@ -2,16 +2,15 @@
 // MOLIT API 응답 진단용 — 배포 후 삭제
 export default async function handler(req, res) {
   const lawdCd = req.query.lawdCd || '11440';
-  const key = process.env.MOLIT_API_KEY;
+  const key = process.env.MOLITRANSACTION_API_KEY;
 
-  if (!key) return res.json({ error: 'MOLIT_API_KEY not set' });
+  if (!key) return res.json({ error: 'MOLITRANSACTION_API_KEY not set' });
 
   const d = new Date();
   d.setMonth(d.getMonth() - 2);
   const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
 
-  const keyTrimmed = key.trim();
-  const url = `https://apis.data.go.kr/1613000/RTMSDataSvcSHRent?serviceKey=${keyTrimmed}&pageNo=1&numOfRows=10&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`;
+  const url = `http://openapi.molit.go.kr:8081/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcSHRent?serviceKey=${encodeURIComponent(key.trim())}&pageNo=1&numOfRows=10&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`;
 
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
