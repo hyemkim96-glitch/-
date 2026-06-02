@@ -4,11 +4,18 @@
 
 const BASE = 'http://apis.data.go.kr/1613000';
 
+function classifyFloor(s) {
+  const t = String(s || '').trim();
+  if (/반지하|반지/.test(t)) return '반지하';
+  if (/옥탑/.test(t)) return '옥탑';
+  if (/지하|^[Bb]\d*$/.test(t) || (/^-?\d+$/.test(t) && parseInt(t) < 0)) return '반지하';
+  return '일반';
+}
+
 async function fetchAll(url) {
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
     const text = await r.text();
-    // MOLIT 에러 응답 감지 (한도초과, 인증실패 등)
     const errCode = text.match(/<returnReasonCode>(\d+)<\/returnReasonCode>/)?.[1];
     if (errCode) return { error: errCode, items: [] };
     const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
@@ -22,6 +29,7 @@ async function fetchAll(url) {
         area: parseFloat(get('전용면적') || '0'),
         type: get('건물유형') || '',
         dong: (get('법정동') || get('법정동명') || '').trim(),
+        floor: get('층') || '',
       };
     });
     return { error: null, items };
@@ -105,6 +113,14 @@ export default async function handler(req, res) {
     Object.entries(dongMap).map(([dong, items]) => [dong, oneroomStats(items)])
   );
 
+  // 층 유형별 원룸 시세 분류
+  const floorGroups = { '일반': [], '반지하': [], '옥탑': [] };
+  oneroom.forEach((item) => {
+    const fc = classifyFloor(item.floor);
+    if (floorGroups[fc]) floorGroups[fc].push(item);
+    else floorGroups['일반'].push(item);
+  });
+
   res.json({
     oneroom: oneroomStats(oneroom),
     tworoom: {
@@ -114,6 +130,9 @@ export default async function handler(req, res) {
       count: tworoom.length,
     },
     byDong,
+    byFloor: Object.fromEntries(
+      Object.entries(floorGroups).map(([k, v]) => [k, oneroomStats(v)])
+    ),
     months,
     total: allItems.length,
     // 진단: API 에러 발생 여부 확인용
