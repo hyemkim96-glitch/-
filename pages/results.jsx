@@ -484,6 +484,14 @@ function normalizeRegion(r) {
   };
 }
 
+// CANDIDATE_REGIONS 가격 데이터를 lawdCd별로 인덱싱 (전국 데이터 사용 시 API 실패 폴백용)
+const candidatePriceByLawdCd = {};
+CANDIDATE_REGIONS.forEach((r) => {
+  if (r.lawdCd && !candidatePriceByLawdCd[r.lawdCd]) {
+    candidatePriceByLawdCd[r.lawdCd] = { avgJeonsaMan: r.avgJeonsaMan, avgRentMan: r.avgRentMan };
+  }
+});
+
 async function buildResults({ asset, income, workLat, workLng, loan, loanRate, transport }) {
   const wx = workLng || 126.9780;
   const wy = workLat || 37.5665;
@@ -547,8 +555,9 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     const dongStats = live?.byDong?.[region.dong] || null;
     const priceBase = dongStats || live?.oneroom || null;
     const fb = regionalFallback(region.sido);
-    const liveJeonsa  = priceBase?.jeonsa      || region.avgJeonsaMan || fb.jeonsaMan;
-    const liveRent    = priceBase?.wolseRent   || region.avgRentMan   || fb.rentMan;
+    const knownPrice = candidatePriceByLawdCd[region.lawdCd];
+    const liveJeonsa  = priceBase?.jeonsa      || region.avgJeonsaMan || knownPrice?.avgJeonsaMan || fb.jeonsaMan;
+    const liveRent    = priceBase?.wolseRent   || region.avgRentMan   || knownPrice?.avgRentMan   || fb.rentMan;
     const liveRentDep = priceBase?.wolseDeposit || Math.round(liveJeonsa * 0.1);
 
     // 출퇴근 (대중교통 + 자가용)
