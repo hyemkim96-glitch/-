@@ -528,19 +528,19 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       .then((r) => r.json())
       .catch(() => null);
 
-  // 가격 요청은 5개씩 배치 처리 (MOLIT API rate limit 방지)
+  // 가격 요청은 2개씩 배치 처리 (MOLIT API rate limit 방지)
   // 동시에 commute·facility 요청도 병렬 시작
   const priceResultsPromise = fetchInBatches(
     uniqueLawdCds,
     async (lawdCd) => {
       try {
-        const r = await fetch(`/api/prices?lawdCd=${lawdCd}&umdNm=`);
+        const r = await fetch(`/api/prices?lawdCd=${lawdCd}`);
         if (r.ok) return [lawdCd, await r.json()];
       } catch {}
       return [lawdCd, null];
     },
-    3,   // 한 번에 3개 lawdCd (서버당 최대 9개 MOLIT 동시 호출)
-    200  // 배치 간 200ms 대기
+    2,   // 한 번에 2개 lawdCd (서버당 최대 2개 MOLIT 동시 호출)
+    400  // 배치 간 400ms 대기
   );
 
   const [commuteTransit, commuteCar, facilityResults] = await Promise.all([
@@ -930,7 +930,7 @@ export default function ResultsPage() {
             </div>
           )}
           <div style={{ margin: '12px 20px 0', padding: '10px 14px', borderRadius: 10, background: 'var(--line)', fontSize: 13, fontWeight: 600, color: 'var(--ink-3)' }}>
-            표시된 가격은 최근 3개월 실거래 <b style={{ color: 'var(--ink-2)' }}>평균가</b>로, 실제 매물 가격과 다를 수 있습니다.
+            표시된 가격은 최근 2개월 실거래 <b style={{ color: 'var(--ink-2)' }}>평균가</b>로, 실제 매물 가격과 다를 수 있습니다.
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 20px' }}>
             {loading

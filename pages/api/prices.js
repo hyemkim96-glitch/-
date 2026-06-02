@@ -19,9 +19,32 @@ function classifyFloor(s) {
 
 async function fetchAll(url) {
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
     const text = await r.text();
     const errCode = text.match(/<returnReasonCode>(\d+)<\/returnReasonCode>/)?.[1];
+    // 22: 서비스 요청 제한 — 500ms 후 1회 재시도
+    if (errCode === '22') {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const r2 = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const text2 = await r2.text();
+      const code2 = text2.match(/<returnReasonCode>(\d+)<\/returnReasonCode>/)?.[1];
+      if (code2) return { error: code2, items: [] };
+      const items2 = [...text2.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
+        const get = (tag) => {
+          const match = m[1].match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
+          return match ? match[1].trim() : '';
+        };
+        return {
+          deposit: parseInt(get('보증금액').replace(/,/g, '') || get('보증금').replace(/,/g, '') || '0', 10),
+          rent: parseInt(get('월세금액').replace(/,/g, '') || get('월세').replace(/,/g, '') || '0', 10),
+          area: parseFloat(get('전용면적') || '0'),
+          type: get('건물유형') || '',
+          dong: (get('법정동') || get('법정동명') || '').trim(),
+          floor: get('층') || '',
+        };
+      });
+      return { error: null, items: items2 };
+    }
     if (errCode) return { error: errCode, items: [] };
     const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
       const get = (tag) => {
@@ -82,15 +105,19 @@ export default async function handler(req, res) {
   const months = recentMonths(2);
   const encodedKey = encodeURIComponent(key);
 
-  // 월별 순차 처리, 월 내 3개 유형 병렬 (아파트 제외)
+  // 모든 MOLIT 호출을 순차 처리 (rate limit 방지: 동시 호출 1개)
+  const endpoints = [
+    'getRTMSDataSvcRHRent',
+    'getRTMSDataSvcSHRent',
+    'getRTMSDataSvcOffiRent',
+  ];
   const rawResults = [];
   for (const ym of months) {
-    const monthResults = await Promise.all([
-      fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcRHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
-      fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcSHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
-      fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcOffiRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
-    ]);
-    rawResults.push(...monthResults);
+    for (const ep of endpoints) {
+      rawResults.push(
+        await fetchAll(`${BASE}/RTMSOBJSvc/${ep}?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`)
+      );
+    }
   }
 
   const errors = rawResults.map((r) => r.error).filter(Boolean);
