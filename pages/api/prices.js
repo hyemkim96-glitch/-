@@ -6,8 +6,11 @@ const BASE = 'http://apis.data.go.kr/1613000';
 
 async function fetchAll(url) {
   try {
-    const r = await fetch(url);
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
     const text = await r.text();
+    // MOLIT 에러 응답 감지 (한도초과, 인증실패 등)
+    const errCode = text.match(/<returnReasonCode>(\d+)<\/returnReasonCode>/)?.[1];
+    if (errCode) return { error: errCode, items: [] };
     const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
       const get = (tag) => {
         const match = m[1].match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
@@ -21,9 +24,9 @@ async function fetchAll(url) {
         dong: (get('법정동') || get('법정동명') || '').trim(),
       };
     });
-    return items;
-  } catch {
-    return [];
+    return { error: null, items };
+  } catch (e) {
+    return { error: e?.name === 'TimeoutError' ? 'TIMEOUT' : 'FETCH_ERROR', items: [] };
   }
 }
 
@@ -60,7 +63,7 @@ export default async function handler(req, res) {
   const encodedKey = encodeURIComponent(key);
 
   // 세 유형 × 3개월 병렬 호출
-  const allItems = (await Promise.all(months.flatMap((ym) => [
+  const rawResults = await Promise.all(months.flatMap((ym) => [
     // 연립·다세대 (빌라, 원룸 포함)
     fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcRHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
     // 단독·다가구 (원룸, 고시원 등)
@@ -69,10 +72,10 @@ export default async function handler(req, res) {
     fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcOffiRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
     // 아파트
     fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcApartRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
-  ]))).flat().filter((item) => {
-    // 해당 동 필터 (umdNm이 포함된 경우만)
-    return true; // lawdCd가 시군구 코드라 동 필터는 클라이언트에서
-  });
+  ]));
+
+  const errors = rawResults.map((r) => r.error).filter(Boolean);
+  const allItems = rawResults.flatMap((r) => r.items);
 
   // 유형별 분류
   const oneroom = allItems.filter((i) => isOneroom(i.area));
@@ -113,5 +116,7 @@ export default async function handler(req, res) {
     byDong,
     months,
     total: allItems.length,
+    // 진단: API 에러 발생 여부 확인용
+    _errors: errors.length ? errors : undefined,
   });
 }
