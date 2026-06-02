@@ -8,13 +8,12 @@ const _cache = {};
 const CACHE_TTL = 6 * 60 * 60 * 1000;
 
 
-function parseItems(text) {
+function parseItems(text, source) {
   return [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
     const get = (tag) => {
       const match = m[1].match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
       return match ? match[1].trim() : '';
     };
-    // 신규 API: 영문 필드명 (deposit, monthlyRent, totalFloorAr, umdNm)
     const depositRaw = get('deposit') || get('보증금액') || get('보증금');
     const rentRaw    = get('monthlyRent') || get('월세금액') || get('월세');
     const areaRaw    = get('excluUseAr') || get('totalFloorAr') || get('전용면적');
@@ -23,11 +22,12 @@ function parseItems(text) {
       rent:    parseInt(rentRaw.replace(/,/g, '') || '0', 10),
       area:    parseFloat(areaRaw || '0'),
       dong:    (get('umdNm') || get('법정동') || get('법정동명')).trim(),
+      source,
     };
   });
 }
 
-async function fetchAll(url) {
+async function fetchAll(url, source) {
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
     const text = await r.text();
@@ -39,10 +39,10 @@ async function fetchAll(url) {
       const text2 = await r2.text();
       const code2 = text2.match(/<resultCode>([^<]+)<\/resultCode>/)?.[1];
       if (code2 && code2 !== '000') return { error: code2, items: [] };
-      return { error: null, items: parseItems(text2) };
+      return { error: null, items: parseItems(text2, source) };
     }
     if (resultCode && resultCode !== '000') return { error: resultCode, items: [] };
-    return { error: null, items: parseItems(text) };
+    return { error: null, items: parseItems(text, source) };
   } catch (e) {
     return { error: e?.name === 'TimeoutError' ? 'TIMEOUT' : 'FETCH_ERROR', items: [] };
   }
@@ -90,9 +90,10 @@ export default async function handler(req, res) {
   const months = recentMonths(3);
   const rawResults = await Promise.all(
     months.flatMap((ym) =>
-      endpoints.map((ep) =>
-        fetchAll(`${BASE}/${ep}?serviceKey=${key.trim()}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}`)
-      )
+      endpoints.map((ep) => {
+        const source = ep.includes('Offi') ? '오피스텔' : ep.includes('RH') ? '연립다세대' : '단독다가구';
+        return fetchAll(`${BASE}/${ep}?serviceKey=${key.trim()}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}`, source);
+      })
     )
   );
 
@@ -112,24 +113,31 @@ export default async function handler(req, res) {
     count: arr.length,
   });
 
-  const dongMap = {};
-  oneroom.forEach((item) => {
-    if (!item.dong) return;
-    const k = /[동가\d]$/.test(item.dong) ? item.dong : item.dong + '동';
-    if (!dongMap[k]) dongMap[k] = [];
-    dongMap[k].push(item);
-  });
+  const offiItems = allItems.filter((i) => i.source === '오피스텔' && isOneroom(i.area));
+
+  function buildDongMap(arr) {
+    const map = {};
+    arr.forEach((item) => {
+      if (!item.dong) return;
+      const k = /[동가\d]$/.test(item.dong) ? item.dong : item.dong + '동';
+      if (!map[k]) map[k] = [];
+      map[k].push(item);
+    });
+    return map;
+  }
 
   const data = {
     oneroom: oneroomStats(oneroom),
-    tworoom: {
-      jeonsa:       avg(jeonsaItems(tworoom).map((i) => i.deposit)),
-      wolseDeposit: avg(wolseItems(tworoom).map((i) => i.deposit)),
-      wolseRent:    avg(wolseItems(tworoom).map((i) => i.rent)),
-      count: tworoom.length,
-    },
+    tworoom: oneroomStats(tworoom),
+    offi:    oneroomStats(offiItems),
     byDong: Object.fromEntries(
-      Object.entries(dongMap).map(([dong, items]) => [dong, oneroomStats(items)])
+      Object.entries(buildDongMap(oneroom)).map(([dong, items]) => [dong, oneroomStats(items)])
+    ),
+    byDongTworoom: Object.fromEntries(
+      Object.entries(buildDongMap(tworoom)).map(([dong, items]) => [dong, oneroomStats(items)])
+    ),
+    byDongOffi: Object.fromEntries(
+      Object.entries(buildDongMap(offiItems)).map(([dong, items]) => [dong, oneroomStats(items)])
     ),
     months,
     total: allItems.length,

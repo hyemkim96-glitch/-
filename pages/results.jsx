@@ -158,6 +158,20 @@ function FilterBar({ filters, setFilters }) {
           onChange={(v) => setFilters({ ...filters, type: v })}
         />
       </div>
+      {/* 방 유형 */}
+      <div data-no-drag>
+        <DropdownPill
+          label={filters.home === '투룸' ? '투룸' : filters.home === '오피스텔' ? '오피스텔' : '원룸'}
+          active={filters.home !== '무관' && filters.home !== '원룸'}
+          value={filters.home}
+          options={[
+            { value: '원룸',   label: '원룸' },
+            { value: '투룸',   label: '투룸' },
+            { value: '오피스텔', label: '오피스텔' },
+          ]}
+          onChange={(v) => setFilters({ ...filters, home: v })}
+        />
+      </div>
       {/* 대출 포함 토글 */}
       <TogglePill label="대출 포함" on={filters.loan} onClick={() => setFilters({ ...filters, loan: !filters.loan })} />
     </div>
@@ -584,11 +598,8 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
 
   const results = [];
   candidatePool.forEach((region, idx) => {
-    // MOLIT 실거래가: 동 단위 우선, 없으면 구 평균. 둘 다 없으면 이 지역 건너뜀
     const live = region.lawdCd ? priceCache[region.lawdCd] : null;
-    const dongStats = findDongStats(live?.byDong, region.dong);
-    const priceBase = dongStats || live?.oneroom || null;
-    // 실 데이터 없거나 jeonsa·rent 둘 다 null이면 건너뜀
+    const priceBase = findDongStats(live?.byDong, region.dong) || live?.oneroom || null;
     if (!priceBase || (!priceBase.jeonsa && !priceBase.wolseRent)) return;
 
     const liveJeonsa  = priceBase.jeonsa;
@@ -677,9 +688,11 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
         breakdown,
         needsLoan: deposit > asset,
         maintenanceFee: region.maintenanceFee || 0,
-_baseJeonsa: liveJeonsa,
+        _baseJeonsa: liveJeonsa,
         _baseRent: liveRent,
         _baseRentDep: liveRentDep || 0,
+        _statsTworoom: findDongStats(live?.byDongTworoom, region.dong) || live?.tworoom || null,
+        _statsOffi:    findDongStats(live?.byDongOffi, region.dong)    || live?.offi    || null,
       });
     }
   });
@@ -765,7 +778,37 @@ export default function ResultsPage() {
       if (filters.type === '월세만' && item.type !== '월세') return false;
       return true;
     })
+    .map((item) => {
+      const stats = filters.home === '투룸' ? item._statsTworoom
+                  : filters.home === '오피스텔' ? item._statsOffi
+                  : null;
+      if (!stats) return item;
+      const jeonsa = stats.jeonsa;
+      const rent   = stats.wolseRent;
+      const dep    = stats.wolseDeposit || 0;
+      if (item.type === '전세') {
+        if (!jeonsa) return { ...item, _noHomeData: true };
+        const loanNeeded = Math.max(0, jeonsa - myAsset);
+        return { ...item,
+          depositMan: jeonsa, capitalMan: jeonsa,
+          monthlyMan: Math.round((loanNeeded * 0.035) / 12) + (item.maintenanceFee || 0),
+          priceLabel: formatKRW(jeonsa), avgLabel: formatKRW(jeonsa),
+          needsLoan: jeonsa > myAsset, tradeCount: stats.count || 0,
+        };
+      } else {
+        if (!rent) return { ...item, _noHomeData: true };
+        const loanNeeded = Math.max(0, dep - myAsset);
+        return { ...item,
+          depositMan: dep, depositForRent: dep,
+          monthlyMan: Math.round((loanNeeded * 0.035) / 12) + rent + (item.maintenanceFee || 0),
+          priceLabel: `보증금 ${formatKRW(dep)} · 월 ${rent}만원`,
+          avgLabel: `보증금 ${formatKRW(dep)} / 월 ${rent}만원`,
+          needsLoan: dep > myAsset, tradeCount: stats.count || 0,
+        };
+      }
+    })
     .filter((item) => {
+      if (filters.home !== '무관' && filters.home !== '원룸' && item._noHomeData) return false;
       if (!filters.loan && item.needsLoan) return false;
       return true;
     })
