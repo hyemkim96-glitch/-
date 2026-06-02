@@ -106,25 +106,21 @@ export default async function handler(req, res) {
     return res.json(hit.data);
   }
 
-  // 포털 복사 키(이미 인코딩) 또는 raw 키 모두 처리:
-  // decode → encode 정규화로 이중 인코딩 방지
-  let encodedKey;
-  try { encodedKey = encodeURIComponent(decodeURIComponent(key)); }
-  catch { encodedKey = encodeURIComponent(key); }
+  const key_trimmed = key.trim();
 
   const months = recentMonths(3);
 
   // 월별 순차, 월 내 3개 유형 병렬 (타임아웃 방지: 한 달 = ~1s)
   const endpoints = [
-    'getRTMSDataSvcRHRent',
-    'getRTMSDataSvcSHRent',
-    'getRTMSDataSvcOffiRent',
+    'RTMSDataSvcRHRent',
+    'RTMSDataSvcSHRent',
+    'RTMSDataSvcOffiRent',
   ];
   const rawResults = [];
   for (const ym of months) {
     const monthResults = await Promise.all(
       endpoints.map((ep) =>
-        fetchAll(`${BASE}/RTMSOBJSvc/${ep}?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`)
+        fetchAll(`${BASE}/${ep}?serviceKey=${key_trimmed}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`)
       )
     );
     rawResults.push(...monthResults);
