@@ -116,8 +116,8 @@ export default async function handler(req, res) {
   const wolseItems  = (arr) => arr.filter((i) => i.rent > 0);
 
   const oneroomStats = (arr) => ({
-    jeonsa:       avg(jeonsaItems(arr).map((i) => Math.round(i.deposit / 10000))),
-    wolseDeposit: avg(wolseItems(arr).map((i) => Math.round(i.deposit / 10000))),
+    jeonsa:       avg(jeonsaItems(arr).map((i) => i.deposit)),
+    wolseDeposit: avg(wolseItems(arr).map((i) => i.deposit)),
     wolseRent:    avg(wolseItems(arr).map((i) => i.rent)),
     count: arr.length,
   });
@@ -139,8 +139,8 @@ export default async function handler(req, res) {
   const data = {
     oneroom: oneroomStats(oneroom),
     tworoom: {
-      jeonsa:       avg(jeonsaItems(tworoom).map((i) => Math.round(i.deposit / 10000))),
-      wolseDeposit: avg(wolseItems(tworoom).map((i) => Math.round(i.deposit / 10000))),
+      jeonsa:       avg(jeonsaItems(tworoom).map((i) => i.deposit)),
+      wolseDeposit: avg(wolseItems(tworoom).map((i) => i.deposit)),
       wolseRent:    avg(wolseItems(tworoom).map((i) => i.rent)),
       count: tworoom.length,
     },
