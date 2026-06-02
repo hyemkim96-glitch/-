@@ -69,6 +69,10 @@ async function fetchAll(url) {
 function recentMonths(n) {
   const months = [];
   const d = new Date();
+  // 전월세 신고 기한: 계약일로부터 30일 이내
+  // → 현재월·전달은 미신고 거래가 많아 데이터 부족
+  // → 2개월 전부터 n개월 조회해야 신뢰할 수 있는 데이터 확보
+  d.setMonth(d.getMonth() - 2);
   for (let i = 0; i < n; i++) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
