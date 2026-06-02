@@ -817,6 +817,10 @@ export default function ResultsPage() {
   }, []);
 
   // 필터 + 정렬 적용
+  // 층 유형별 가격 조정 비율 (MOLIT 층 데이터 없을 때 추정치)
+  // 일반 > 평균 > 옥탑 > 반지하 순으로 비싼 게 일반적
+  const FLOOR_RATIO = { '일반': 1.10, '반지하': 0.72, '옥탑': 0.82 };
+
   const filtered = allResults
     .filter((item) => {
       if (filters.type === '전세만' && item.type !== '전세') return false;
@@ -826,11 +830,16 @@ export default function ResultsPage() {
     .map((item) => {
       // 층 유형 필터: floor-specific 평균가로 가격 재계산
       if (filters.floor === '전체') return item;
+
       const floorStats = item.byFloor?.[filters.floor];
-      if (!floorStats) return item;
+      // 실 데이터가 있으면 사용, 없으면 비율 추정치 적용
+      const hasRealData = floorStats?.count > 0 && (floorStats?.jeonsa || floorStats?.wolseRent);
+      const ratio = FLOOR_RATIO[filters.floor] ?? 1;
 
       if (item.type === '전세') {
-        const deposit = floorStats.jeonsa || item._baseJeonsa;
+        const deposit = hasRealData
+          ? (floorStats.jeonsa || item._baseJeonsa)
+          : Math.round(item._baseJeonsa * ratio);
         if (!deposit) return item;
         const loanNeeded = Math.max(0, deposit - myAsset);
         const newMonthly = Math.round((loanNeeded * 0.035) / 12) + (item.maintenanceFee || 0);
@@ -840,12 +849,16 @@ export default function ResultsPage() {
           capitalMan: deposit,
           monthlyMan: newMonthly,
           priceLabel: formatKRW(deposit),
-          avgLabel: floorStats.jeonsa ? formatKRW(floorStats.jeonsa) : item.avgLabel,
+          avgLabel: formatKRW(deposit),
           needsLoan: deposit > myAsset,
         };
       } else {
-        const rentDep = floorStats.wolseDeposit ?? item._baseRentDep;
-        const rent = floorStats.wolseRent || item._baseRent;
+        const rent = hasRealData
+          ? (floorStats.wolseRent || item._baseRent)
+          : Math.round(item._baseRent * ratio);
+        const rentDep = hasRealData
+          ? (floorStats.wolseDeposit ?? item._baseRentDep)
+          : Math.round(item._baseRentDep * ratio);
         if (!rent) return item;
         const depAmt = rentDep || 0;
         const loanNeeded = Math.max(0, depAmt - myAsset);
@@ -856,7 +869,7 @@ export default function ResultsPage() {
           depositForRent: depAmt,
           monthlyMan: newMonthly,
           priceLabel: `보증금 ${formatKRW(depAmt)} · 월 ${rent}만원`,
-          avgLabel: floorStats.wolseRent ? `보증금 ${formatKRW(depAmt)} / 월 ${rent}만원` : item.avgLabel,
+          avgLabel: `보증금 ${formatKRW(depAmt)} / 월 ${rent}만원`,
           needsLoan: depAmt > myAsset,
         };
       }
