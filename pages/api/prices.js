@@ -2,7 +2,7 @@
 // 국토교통부 실거래가 API로 전월세 평균 시세 조회
 // 원룸(연립다세대+단독다가구+오피스텔) 지원
 
-const BASE = 'https://apis.data.go.kr/1613000';
+const BASE = 'http://openapi.molit.go.kr:8081/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc';
 
 // 서버 사이드 캐시 — 같은 lawdCd는 6시간 동안 MOLIT 재호출 없음
 // (실거래 데이터는 하루에 몇 번만 갱신되므로 per-request 호출은 낭비)
@@ -94,9 +94,9 @@ function isTworoom(area) { return area > 33 && area <= 66; }
 
 export default async function handler(req, res) {
   const { lawdCd } = req.query;
-  const key = process.env.MOLIT_API_KEY;
+  const key = process.env.MOLITRANSACTION_API_KEY;
 
-  if (!key) return res.json({ error: 'MOLIT_API_KEY not set' });
+  if (!key) return res.json({ error: 'MOLITRANSACTION_API_KEY not set' });
   if (!lawdCd) return res.json({ error: 'lawdCd required' });
 
   // 캐시 히트: 6시간 내 동일 lawdCd 요청은 MOLIT 재호출 없이 즉시 반환
@@ -106,21 +106,21 @@ export default async function handler(req, res) {
     return res.json(hit.data);
   }
 
-  const key_trimmed = key.trim();
+  const encodedKey = encodeURIComponent(key.trim());
 
   const months = recentMonths(3);
 
   // 월별 순차, 월 내 3개 유형 병렬 (타임아웃 방지: 한 달 = ~1s)
   const endpoints = [
-    'RTMSDataSvcRHRent',
-    'RTMSDataSvcSHRent',
-    'RTMSDataSvcOffiRent',
+    'getRTMSDataSvcRHRent',
+    'getRTMSDataSvcSHRent',
+    'getRTMSDataSvcOffiRent',
   ];
   const rawResults = [];
   for (const ym of months) {
     const monthResults = await Promise.all(
       endpoints.map((ep) =>
-        fetchAll(`${BASE}/${ep}?serviceKey=${key_trimmed}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`)
+        fetchAll(`${BASE}/${ep}?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`)
       )
     );
     rawResults.push(...monthResults);
