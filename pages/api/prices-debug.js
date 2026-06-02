@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   d.setMonth(d.getMonth() - 2);
   const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
 
-  const url = `http://apis.data.go.kr/1613000/RTMSOBJSvc/getRTMSDataSvcRHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=10&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`;
+  const url = `https://apis.data.go.kr/1613000/RTMSOBJSvc/getRTMSDataSvcRHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=10&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`;
 
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
