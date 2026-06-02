@@ -606,11 +606,31 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
 
   const priceCache = Object.fromEntries(priceResults);
 
+  // byDong 조회: 정확 매칭 → 접두사 매칭(가/숫자 결미 동명 대응) → null
+  function findDongStats(byDong, dongName) {
+    if (!byDong) return null;
+    if (byDong[dongName]) return byDong[dongName];
+    // '성수동' → '성수동1가', '성수동2가' 등 prefix 매칭
+    const base = dongName.endsWith('동') ? dongName.slice(0, -1) : dongName;
+    const keys = Object.keys(byDong).filter((k) => k.startsWith(base));
+    if (!keys.length) return null;
+    if (keys.length === 1) return byDong[keys[0]];
+    // 여러 동이 매칭되면 가중평균
+    const all = keys.map((k) => byDong[k]);
+    const avgOf = (vals) => { const v = vals.filter((x) => x != null); return v.length ? Math.round(v.reduce((s, x) => s + x, 0) / v.length) : null; };
+    return {
+      jeonsa: avgOf(all.map((s) => s.jeonsa)),
+      wolseDeposit: avgOf(all.map((s) => s.wolseDeposit)),
+      wolseRent: avgOf(all.map((s) => s.wolseRent)),
+      count: all.reduce((s, m) => s + (m.count || 0), 0),
+    };
+  }
+
   const results = [];
   candidatePool.forEach((region, idx) => {
     // 실거래가 — 동 단위 → 구 평균 → 시도별 fallback 순으로 적용
     const live = region.lawdCd ? priceCache[region.lawdCd] : null;
-    const dongStats = live?.byDong?.[region.dong] || null;
+    const dongStats = findDongStats(live?.byDong, region.dong);
     const priceBase = dongStats || live?.oneroom || null;
     const fb = regionalFallback(region.sido);
     const knownPrice = candidatePriceByLawdCd[region.lawdCd];

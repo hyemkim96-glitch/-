@@ -62,13 +62,13 @@ export default async function handler(req, res) {
   // 세 유형 × 3개월 병렬 호출
   const allItems = (await Promise.all(months.flatMap((ym) => [
     // 연립·다세대 (빌라, 원룸 포함)
-    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcRHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=100&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
+    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcRHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
     // 단독·다가구 (원룸, 고시원 등)
-    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcSHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=100&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
+    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcSHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
     // 오피스텔
-    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcOffiRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=100&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
+    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcOffiRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
     // 아파트
-    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcApartRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=100&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
+    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcApartRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
   ]))).flat().filter((item) => {
     // 해당 동 필터 (umdNm이 포함된 경우만)
     return true; // lawdCd가 시군구 코드라 동 필터는 클라이언트에서
@@ -93,8 +93,8 @@ export default async function handler(req, res) {
   const dongMap = {};
   oneroom.forEach((item) => {
     if (!item.dong) return;
-    // "합정", "합정동" 등 모두 "합정동"으로 정규화
-    const key = item.dong.endsWith('동') ? item.dong : item.dong + '동';
+    // '합정' → '합정동', '성수동1가'/'당산2가' 등 가·숫자 결미는 그대로 유지
+    const key = /[동가\d]$/.test(item.dong) ? item.dong : item.dong + '동';
     if (!dongMap[key]) dongMap[key] = [];
     dongMap[key].push(item);
   });
