@@ -853,10 +853,6 @@ export default function ResultsPage() {
   }, []);
 
   // 필터 + 정렬 적용
-  // 층 유형별 가격 조정 비율 (MOLIT 층 데이터 없을 때 추정치)
-  // 일반 > 평균 > 옥탑 > 반지하 순으로 비싼 게 일반적
-  const FLOOR_RATIO = { '일반': 1.10, '반지하': 0.72, '옥탑': 0.82 };
-
   const filtered = allResults
     .filter((item) => {
       if (filters.type === '전세만' && item.type !== '전세') return false;
@@ -864,18 +860,14 @@ export default function ResultsPage() {
       return true;
     })
     .map((item) => {
-      // 층 유형 필터: floor-specific 평균가로 가격 재계산
+      // 층 유형 필터: MOLIT 실 데이터 있을 때만 가격 재계산, 없으면 원본 유지
       if (filters.floor === '전체') return item;
 
       const floorStats = item.byFloor?.[filters.floor];
-      // 실 데이터가 있으면 사용, 없으면 비율 추정치 적용
-      const hasRealData = floorStats?.count > 0 && (floorStats?.jeonsa || floorStats?.wolseRent);
-      const ratio = FLOOR_RATIO[filters.floor] ?? 1;
+      if (!floorStats || floorStats.count === 0) return item;
 
       if (item.type === '전세') {
-        const deposit = hasRealData
-          ? (floorStats.jeonsa || item._baseJeonsa)
-          : Math.round(item._baseJeonsa * ratio);
+        const deposit = floorStats.jeonsa;
         if (!deposit) return item;
         const loanNeeded = Math.max(0, deposit - myAsset);
         const newMonthly = Math.round((loanNeeded * 0.035) / 12) + (item.maintenanceFee || 0);
@@ -889,14 +881,9 @@ export default function ResultsPage() {
           needsLoan: deposit > myAsset,
         };
       } else {
-        const rent = hasRealData
-          ? (floorStats.wolseRent || item._baseRent)
-          : Math.round(item._baseRent * ratio);
-        const rentDep = hasRealData
-          ? (floorStats.wolseDeposit ?? item._baseRentDep)
-          : Math.round(item._baseRentDep * ratio);
+        const rent = floorStats.wolseRent;
+        const depAmt = floorStats.wolseDeposit || 0;
         if (!rent) return item;
-        const depAmt = rentDep || 0;
         const loanNeeded = Math.max(0, depAmt - myAsset);
         const newMonthly = Math.round((loanNeeded * 0.035) / 12) + rent + (item.maintenanceFee || 0);
         return {
