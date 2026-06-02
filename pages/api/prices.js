@@ -106,8 +106,9 @@ export default async function handler(req, res) {
     return res.json(hit.data);
   }
 
-  const months = recentMonths(2);
-  const encodedKey = encodeURIComponent(key);
+  // data.go.kr 포털에서 복사한 서비스키는 이미 URL 인코딩 상태
+  // encodeURIComponent 재적용 시 이중 인코딩(%2B → %252B)으로 HTTP 500 발생
+  const encodedKey = key;
 
   // 월별 순차, 월 내 3개 유형 병렬 (타임아웃 방지: 한 달 = ~1s)
   const endpoints = [
