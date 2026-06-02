@@ -353,15 +353,9 @@ function ExpandedSheet({ item, onClose, myAsset }) {
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-2)', background: 'var(--bg)', padding: '3px 9px', borderRadius: 6 }}>{item.type}</span>
             <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{item.priceLabel}</span>
           </div>
-          {item.noData ? (
-            <div style={{ marginTop: 8, fontSize: 13, color: 'var(--ink-3)', fontWeight: 500 }}>
-              <span style={{ background: 'var(--mid-weak)', color: 'var(--mid)', fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 6 }}>시세 데이터 부족</span>
-            </div>
-          ) : (
-            <div style={{ marginTop: 8, fontSize: 13.5, color: 'var(--ink-2)', fontWeight: 500 }}>
-              최근 3개월 평균 시세 <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{item.avgLabel || '—'}</span>
-            </div>
-          )}
+          <div style={{ marginTop: 8, fontSize: 13.5, color: 'var(--ink-2)', fontWeight: 500 }}>
+            최근 2개월 실거래 평균 <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{item.avgLabel}</span>
+          </div>
           <div style={{ marginTop: 18, display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: '14px 0', overflow: 'hidden' }}>
             <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={`${item.monthlyMan}만원`} note="관리비 포함" />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
@@ -471,17 +465,6 @@ function estimateCommute(km, transport) {
   return Math.round(km / 25 * 60 + 10);
 }
 
-// 시세 데이터 없을 때 시도별 평균 fallback (만원)
-function regionalFallback(sido) {
-  if (sido === '서울특별시')
-    return { jeonsaMan: 25000, rentMan: 60, rentDepMan: 2500 };
-  if (sido === '경기도')
-    return { jeonsaMan: 18000, rentMan: 45, rentDepMan: 1800 };
-  if (['부산광역시','대구광역시','인천광역시','광주광역시','대전광역시','울산광역시','세종특별자치시'].includes(sido))
-    return { jeonsaMan: 12000, rentMan: 35, rentDepMan: 1200 };
-  return { jeonsaMan: 7000, rentMan: 25, rentDepMan: 700 };
-}
-
 // JSON 지역 → 앱 포맷 변환
 function normalizeRegion(r) {
   return {
@@ -498,73 +481,6 @@ function normalizeRegion(r) {
     defaultLife: r.defaultLife || { subway: 1, store: 3, mart: 1, hospital: 2 },
   };
 }
-
-// 전국 데이터(regions.json)에는 avgJeonsaMan 없음 → MOLIT API 실패 시 구별 추정가 폴백
-// 서울 25개 구 + 주요 경기 시군구 lawdCd별 원룸 기준 추정가 (만원)
-// avgRentDepMan: 월세 원룸 평균 보증금 (만원) — 10%공식 대신 현실적 수치 사용
-const LAWDCD_PRICE = {
-  // 서울 — 강남 3구 (원룸 33㎡ 이하 실거래 평균 기준, 2024-2025)
-  '11680': { avgJeonsaMan: 33000, avgRentMan: 150, avgRentDepMan: 1200 }, // 강남구
-  '11650': { avgJeonsaMan: 31000, avgRentMan: 130, avgRentDepMan: 1100 }, // 서초구
-  '11710': { avgJeonsaMan: 25000, avgRentMan: 100, avgRentDepMan:  900 }, // 송파구
-  // 서울 — 도심·한강이북
-  '11110': { avgJeonsaMan: 22000, avgRentMan:  80, avgRentDepMan:  900 }, // 종로구
-  '11140': { avgJeonsaMan: 21000, avgRentMan:  78, avgRentDepMan:  800 }, // 중구
-  '11170': { avgJeonsaMan: 25000, avgRentMan:  95, avgRentDepMan: 1000 }, // 용산구
-  '11200': { avgJeonsaMan: 22000, avgRentMan:  85, avgRentDepMan:  800 }, // 성동구
-  '11440': { avgJeonsaMan: 19000, avgRentMan:  70, avgRentDepMan:  700 }, // 마포구
-  '11410': { avgJeonsaMan: 15000, avgRentMan:  58, avgRentDepMan:  500 }, // 서대문구
-  '11215': { avgJeonsaMan: 17000, avgRentMan:  63, avgRentDepMan:  600 }, // 광진구
-  '11230': { avgJeonsaMan: 14000, avgRentMan:  53, avgRentDepMan:  400 }, // 동대문구
-  '11290': { avgJeonsaMan: 13500, avgRentMan:  50, avgRentDepMan:  400 }, // 성북구
-  // 서울 — 동남권
-  '11740': { avgJeonsaMan: 20000, avgRentMan:  70, avgRentDepMan:  700 }, // 강동구
-  '11260': { avgJeonsaMan: 12000, avgRentMan:  46, avgRentDepMan:  300 }, // 중랑구
-  // 서울 — 서남권
-  '11560': { avgJeonsaMan: 17000, avgRentMan:  60, avgRentDepMan:  600 }, // 영등포구
-  '11470': { avgJeonsaMan: 15500, avgRentMan:  55, avgRentDepMan:  400 }, // 양천구
-  '11500': { avgJeonsaMan: 14500, avgRentMan:  52, avgRentDepMan:  400 }, // 강서구
-  '11530': { avgJeonsaMan: 13000, avgRentMan:  48, avgRentDepMan:  300 }, // 구로구
-  '11545': { avgJeonsaMan: 11000, avgRentMan:  44, avgRentDepMan:  300 }, // 금천구
-  '11590': { avgJeonsaMan: 15000, avgRentMan:  58, avgRentDepMan:  500 }, // 동작구
-  '11620': { avgJeonsaMan: 12500, avgRentMan:  49, avgRentDepMan:  300 }, // 관악구
-  // 서울 — 강북 외곽
-  '11305': { avgJeonsaMan: 10500, avgRentMan:  41, avgRentDepMan:  200 }, // 강북구
-  '11320': { avgJeonsaMan:  9500, avgRentMan:  39, avgRentDepMan:  200 }, // 도봉구
-  '11350': { avgJeonsaMan: 10000, avgRentMan:  40, avgRentDepMan:  200 }, // 노원구
-  '11380': { avgJeonsaMan: 11500, avgRentMan:  44, avgRentDepMan:  300 }, // 은평구
-  // 경기 주요 시군구
-  '41111': { avgJeonsaMan: 10000, avgRentMan:  40, avgRentDepMan:  200 }, // 수원 장안구
-  '41113': { avgJeonsaMan:  9500, avgRentMan:  38, avgRentDepMan:  200 }, // 수원 권선구
-  '41115': { avgJeonsaMan:  9000, avgRentMan:  37, avgRentDepMan:  200 }, // 수원 팔달구
-  '41117': { avgJeonsaMan: 10000, avgRentMan:  40, avgRentDepMan:  200 }, // 수원 영통구
-  '41131': { avgJeonsaMan: 11000, avgRentMan:  42, avgRentDepMan:  200 }, // 성남 중원구
-  '41133': { avgJeonsaMan: 10500, avgRentMan:  41, avgRentDepMan:  200 }, // 성남 수정구
-  '41135': { avgJeonsaMan: 18000, avgRentMan:  60, avgRentDepMan:  500 }, // 성남 분당구
-  '41171': { avgJeonsaMan:  9500, avgRentMan:  38, avgRentDepMan:  200 }, // 안양 만안구
-  '41173': { avgJeonsaMan: 11000, avgRentMan:  42, avgRentDepMan:  200 }, // 안양 동안구
-  '41190': { avgJeonsaMan:  9000, avgRentMan:  36, avgRentDepMan:  200 }, // 부천시
-  '41210': { avgJeonsaMan:  9500, avgRentMan:  38, avgRentDepMan:  200 }, // 광명시
-  '41281': { avgJeonsaMan: 12000, avgRentMan:  44, avgRentDepMan:  300 }, // 고양 덕양구
-  '41285': { avgJeonsaMan: 13000, avgRentMan:  46, avgRentDepMan:  300 }, // 고양 일산동구
-  '41287': { avgJeonsaMan: 12500, avgRentMan:  45, avgRentDepMan:  300 }, // 고양 일산서구
-  '41310': { avgJeonsaMan: 11000, avgRentMan:  42, avgRentDepMan:  200 }, // 구리시
-  '41360': { avgJeonsaMan: 10000, avgRentMan:  39, avgRentDepMan:  200 }, // 남양주시
-  '41390': { avgJeonsaMan:  9000, avgRentMan:  36, avgRentDepMan:  200 }, // 시흥시
-  '41450': { avgJeonsaMan: 11500, avgRentMan:  43, avgRentDepMan:  200 }, // 하남시
-  '41461': { avgJeonsaMan:  8000, avgRentMan:  33, avgRentDepMan:  150 }, // 용인 처인구
-  '41463': { avgJeonsaMan: 11000, avgRentMan:  41, avgRentDepMan:  200 }, // 용인 기흥구
-  '41465': { avgJeonsaMan: 13000, avgRentMan:  46, avgRentDepMan:  300 }, // 용인 수지구
-  '41590': { avgJeonsaMan:  9500, avgRentMan:  38, avgRentDepMan:  200 }, // 화성시
-};
-
-// CANDIDATE_REGIONS 가격으로 LAWDCD_PRICE 보완 (동일 lawdCd 있으면 CANDIDATE 우선)
-CANDIDATE_REGIONS.forEach((r) => {
-  if (r.lawdCd && !LAWDCD_PRICE[r.lawdCd]) {
-    LAWDCD_PRICE[r.lawdCd] = { avgJeonsaMan: r.avgJeonsaMan, avgRentMan: r.avgRentMan };
-  }
-});
-const candidatePriceByLawdCd = LAWDCD_PRICE;
 
 // MOLIT API rate limit 방지: items를 batchSize씩 나눠 순차 실행
 async function fetchInBatches(items, fn, batchSize, delayMs = 0) {
@@ -673,15 +589,15 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
 
   const results = [];
   candidatePool.forEach((region, idx) => {
-    // 실거래가 — 동 단위 → 구 평균 → 시도별 fallback 순으로 적용
+    // MOLIT 실거래가: 동 단위 우선, 없으면 구 평균. 둘 다 없으면 이 지역 건너뜀
     const live = region.lawdCd ? priceCache[region.lawdCd] : null;
     const dongStats = findDongStats(live?.byDong, region.dong);
     const priceBase = dongStats || live?.oneroom || null;
-    const fb = regionalFallback(region.sido);
-    const knownPrice = candidatePriceByLawdCd[region.lawdCd];
-    const liveJeonsa  = priceBase?.jeonsa      || region.avgJeonsaMan || knownPrice?.avgJeonsaMan || fb.jeonsaMan;
-    const liveRent    = priceBase?.wolseRent   || region.avgRentMan   || knownPrice?.avgRentMan   || fb.rentMan;
-    const liveRentDep = priceBase?.wolseDeposit || knownPrice?.avgRentDepMan || Math.round(liveJeonsa * 0.05);
+    if (!priceBase) return; // 실 데이터 없으면 표시 안 함
+
+    const liveJeonsa  = priceBase.jeonsa;
+    const liveRent    = priceBase.wolseRent;
+    const liveRentDep = priceBase.wolseDeposit;
 
     // 출퇴근 (대중교통 + 자가용)
     const km = haversineKm(wy, wx, region.coords.lat, region.coords.lng);
@@ -700,14 +616,11 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     // 생활권
     const life = facilityResults[idx] || region.defaultLife;
 
-    // 실거래가 있는지 여부 (없으면 fallback 값 사용)
-    const hasLiveData = !!priceBase;
-
-    // 실거래가 기반 옵션으로 동적 생성
+    // 전세/월세 중 데이터 있는 유형만 생성
     const dynamicOptions = [
-      { type: '전세', depositMan: liveJeonsa },
-      { type: '월세', depositForRent: liveRentDep, rentMan: liveRent },
-    ];
+      liveJeonsa ? { type: '전세', depositMan: liveJeonsa } : null,
+      liveRent   ? { type: '월세', depositForRent: liveRentDep || 0, rentMan: liveRent } : null,
+    ].filter(Boolean);
 
     for (const opt of dynamicOptions) {
       const deposit = opt.type === '전세' ? opt.depositMan : (opt.depositForRent || 0);
@@ -739,11 +652,9 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       const priceLabel = opt.type === '전세'
         ? formatKRW(deposit)
         : `보증금 ${formatKRW(opt.depositForRent || 0)} · 월 ${rentMan}만원`;
-      const avgLabel = hasLiveData
-        ? (opt.type === '전세'
-          ? formatKRW(liveJeonsa)
-          : `보증금 ${formatKRW(liveRentDep)} / 월 ${liveRent}만원`)
-        : null;
+      const avgLabel = opt.type === '전세'
+        ? formatKRW(liveJeonsa)
+        : `보증금 ${formatKRW(liveRentDep || 0)} / 월 ${liveRent}만원`;
       const transitLabel = `${transitMin}분${transitEstimated ? '*' : ''}`;
       const carLabel = `${carMin}분${carEstimated ? '*' : ''}`;
 
@@ -767,13 +678,12 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
         life,
         score,
         breakdown,
-        noData: !hasLiveData,
         needsLoan: deposit > asset,
         maintenanceFee: region.maintenanceFee || 0,
         byFloor: live?.byFloor || null,
         _baseJeonsa: liveJeonsa,
         _baseRent: liveRent,
-        _baseRentDep: liveRentDep,
+        _baseRentDep: liveRentDep || 0,
       });
     }
   });
