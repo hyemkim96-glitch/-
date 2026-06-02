@@ -23,14 +23,20 @@ export default async function handler(req, res) {
     try {
       const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
       const text = await r.text();
-      const floors = [...text.matchAll(/<item>[\s\S]*?<\/item>/g)].map((m) => {
-        const get = (tag) => m[0].match(new RegExp(`<${tag}>([^<]*)</${tag}>`))?.[1]?.trim() ?? '';
-        return get('층');
+      const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+      // 첫 번째 아이템의 모든 태그명 추출
+      const firstItemTags = items[0]
+        ? [...items[0][1].matchAll(/<([a-zA-Z가-힣]+)>/g)].map((m) => m[1])
+        : [];
+      const floors = items.map((m) => {
+        const get = (tag) => m[1].match(new RegExp(`<${tag}>([^<]*)</${tag}>`))?.[1]?.trim() ?? '';
+        return get('층') || get('floor') || get('floorNo') || get('flr') || '(none)';
       });
       const floorCounts = floors.reduce((acc, f) => { acc[f] = (acc[f] || 0) + 1; return acc; }, {});
       results[name] = {
         totalCount: text.match(/<totalCount>(\d+)<\/totalCount>/)?.[1],
-        itemCount: floors.length,
+        itemCount: items.length,
+        firstItemFields: firstItemTags,
         floorValues: floorCounts,
       };
     } catch (e) {
