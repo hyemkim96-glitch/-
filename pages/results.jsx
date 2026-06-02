@@ -484,13 +484,71 @@ function normalizeRegion(r) {
   };
 }
 
-// CANDIDATE_REGIONS 가격 데이터를 lawdCd별로 인덱싱 (전국 데이터 사용 시 API 실패 폴백용)
-const candidatePriceByLawdCd = {};
+// 전국 데이터(regions.json)에는 avgJeonsaMan 없음 → MOLIT API 실패 시 구별 추정가 폴백
+// 서울 25개 구 + 주요 경기 시군구 lawdCd별 원룸 기준 추정가 (만원)
+const LAWDCD_PRICE = {
+  // 서울 — 강남 3구
+  '11680': { avgJeonsaMan: 28000, avgRentMan: 85 }, // 강남구
+  '11650': { avgJeonsaMan: 26000, avgRentMan: 80 }, // 서초구
+  '11710': { avgJeonsaMan: 22000, avgRentMan: 72 }, // 송파구
+  // 서울 — 도심·한강이북
+  '11110': { avgJeonsaMan: 20000, avgRentMan: 68 }, // 종로구
+  '11140': { avgJeonsaMan: 19500, avgRentMan: 66 }, // 중구
+  '11170': { avgJeonsaMan: 19000, avgRentMan: 70 }, // 용산구
+  '11200': { avgJeonsaMan: 19500, avgRentMan: 76 }, // 성동구
+  '11440': { avgJeonsaMan: 17500, avgRentMan: 63 }, // 마포구
+  '11410': { avgJeonsaMan: 14000, avgRentMan: 52 }, // 서대문구
+  '11215': { avgJeonsaMan: 15000, avgRentMan: 55 }, // 광진구
+  '11230': { avgJeonsaMan: 13000, avgRentMan: 48 }, // 동대문구
+  '11290': { avgJeonsaMan: 12500, avgRentMan: 46 }, // 성북구
+  // 서울 — 동남권
+  '11740': { avgJeonsaMan: 18000, avgRentMan: 62 }, // 강동구
+  '11260': { avgJeonsaMan: 11000, avgRentMan: 43 }, // 중랑구
+  // 서울 — 서남권
+  '11560': { avgJeonsaMan: 16000, avgRentMan: 54 }, // 영등포구
+  '11470': { avgJeonsaMan: 14500, avgRentMan: 50 }, // 양천구
+  '11500': { avgJeonsaMan: 13500, avgRentMan: 49 }, // 강서구
+  '11530': { avgJeonsaMan: 12000, avgRentMan: 45 }, // 구로구
+  '11545': { avgJeonsaMan: 10500, avgRentMan: 41 }, // 금천구
+  '11590': { avgJeonsaMan: 13500, avgRentMan: 53 }, // 동작구
+  '11620': { avgJeonsaMan: 11500, avgRentMan: 46 }, // 관악구
+  // 서울 — 강북 외곽
+  '11305': { avgJeonsaMan:  9500, avgRentMan: 38 }, // 강북구
+  '11320': { avgJeonsaMan:  9000, avgRentMan: 37 }, // 도봉구
+  '11350': { avgJeonsaMan:  9500, avgRentMan: 38 }, // 노원구
+  '11380': { avgJeonsaMan: 10500, avgRentMan: 41 }, // 은평구
+  // 경기 주요 시군구
+  '41111': { avgJeonsaMan: 10000, avgRentMan: 40 }, // 수원 장안구
+  '41113': { avgJeonsaMan:  9500, avgRentMan: 38 }, // 수원 권선구
+  '41115': { avgJeonsaMan:  9000, avgRentMan: 37 }, // 수원 팔달구
+  '41117': { avgJeonsaMan: 10000, avgRentMan: 40 }, // 수원 영통구
+  '41131': { avgJeonsaMan: 11000, avgRentMan: 42 }, // 성남 중원구
+  '41133': { avgJeonsaMan: 10500, avgRentMan: 41 }, // 성남 수정구
+  '41135': { avgJeonsaMan: 18000, avgRentMan: 58 }, // 성남 분당구
+  '41171': { avgJeonsaMan:  9500, avgRentMan: 38 }, // 안양 만안구
+  '41173': { avgJeonsaMan: 11000, avgRentMan: 42 }, // 안양 동안구
+  '41190': { avgJeonsaMan:  9000, avgRentMan: 36 }, // 부천시
+  '41210': { avgJeonsaMan:  9500, avgRentMan: 38 }, // 광명시
+  '41281': { avgJeonsaMan: 12000, avgRentMan: 44 }, // 고양 덕양구
+  '41285': { avgJeonsaMan: 13000, avgRentMan: 46 }, // 고양 일산동구
+  '41287': { avgJeonsaMan: 12500, avgRentMan: 45 }, // 고양 일산서구
+  '41310': { avgJeonsaMan: 11000, avgRentMan: 42 }, // 구리시
+  '41360': { avgJeonsaMan: 10000, avgRentMan: 39 }, // 남양주시
+  '41390': { avgJeonsaMan:  9000, avgRentMan: 36 }, // 시흥시
+  '41450': { avgJeonsaMan: 11500, avgRentMan: 43 }, // 하남시
+  '41461': { avgJeonsaMan:  8000, avgRentMan: 33 }, // 용인 처인구
+  '41463': { avgJeonsaMan: 11000, avgRentMan: 41 }, // 용인 기흥구
+  '41465': { avgJeonsaMan: 13000, avgRentMan: 46 }, // 용인 수지구
+  '41590': { avgJeonsaMan:  9500, avgRentMan: 38 }, // 화성시
+};
+
+// CANDIDATE_REGIONS 가격으로 LAWDCD_PRICE 보완 (동일 lawdCd 있으면 CANDIDATE 우선)
 CANDIDATE_REGIONS.forEach((r) => {
-  if (r.lawdCd && !candidatePriceByLawdCd[r.lawdCd]) {
-    candidatePriceByLawdCd[r.lawdCd] = { avgJeonsaMan: r.avgJeonsaMan, avgRentMan: r.avgRentMan };
+  if (r.lawdCd && !LAWDCD_PRICE[r.lawdCd]) {
+    LAWDCD_PRICE[r.lawdCd] = { avgJeonsaMan: r.avgJeonsaMan, avgRentMan: r.avgRentMan };
   }
 });
+const candidatePriceByLawdCd = LAWDCD_PRICE;
 
 async function buildResults({ asset, income, workLat, workLng, loan, loanRate, transport }) {
   const wx = workLng || 126.9780;
