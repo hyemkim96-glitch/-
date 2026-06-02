@@ -2,7 +2,7 @@
 // 국토교통부 실거래가 API로 전월세 평균 시세 조회
 // 원룸(연립다세대+단독다가구), 오피스텔, 아파트 세 유형 지원
 
-const BASE = 'http://apis.data.go.kr/1613000';
+const BASE = 'https://apis.data.go.kr/1613000';
 
 function classifyFloor(s) {
   const t = String(s || '').trim();
