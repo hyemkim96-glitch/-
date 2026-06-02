@@ -473,7 +473,7 @@ function normalizeRegion(r) {
     id: r.code || r.id,
     gu: r.sigungu || r.gu,
     dong: r.dong,
-    sido: r.sido || '',
+    sido: r.sido || (r.lawdCd?.startsWith('11') ? '서울특별시' : r.lawdCd?.startsWith('41') ? '경기도' : ''),
     lawdCd: r.lawdCd,
     coords: r.coords || { lat: r.lat, lng: r.lng },
     pin: r.pin || { x: 50, y: 50 },
@@ -547,11 +547,9 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     const dongStats = live?.byDong?.[region.dong] || null;
     const priceBase = dongStats || live?.oneroom || null;
     const fb = regionalFallback(region.sido);
-    const liveJeonsa  = priceBase?.jeonsa     || region.avgJeonsaMan || fb.jeonsaMan;
-    const liveRent    = priceBase?.wolseRent  || region.avgRentMan   || fb.rentMan;
-    const liveRentDep = priceBase?.wolseDeposit || region.avgJeonsaMan
-      ? Math.round(liveJeonsa * 0.1)
-      : fb.rentDepMan;
+    const liveJeonsa  = priceBase?.jeonsa      || region.avgJeonsaMan || fb.jeonsaMan;
+    const liveRent    = priceBase?.wolseRent   || region.avgRentMan   || fb.rentMan;
+    const liveRentDep = priceBase?.wolseDeposit || Math.round(liveJeonsa * 0.1);
 
     // 출퇴근 (대중교통 + 자가용)
     const km = haversineKm(wy, wx, region.coords.lat, region.coords.lng);
@@ -719,7 +717,10 @@ export default function ResultsPage() {
       return true;
     })
     .sort((a, b) => {
-      if (filters.sort === 'monthly') return a.monthlyMan - b.monthlyMan;
+      if (filters.sort === 'monthly') {
+        if (a.monthlyMan !== b.monthlyMan) return a.monthlyMan - b.monthlyMan;
+        return a.depositMan - b.depositMan; // 고정비 동일 시 보증금 낮은 순
+      }
       if (filters.sort === 'commute') return a.sortMinute - b.sortMinute;
       if (b.score !== a.score) return b.score - a.score;
       return a.sortMinute - b.sortMinute; // 추천순 동점 시 가까운 순
