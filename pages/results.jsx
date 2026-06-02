@@ -161,12 +161,13 @@ function FilterBar({ filters, setFilters }) {
       {/* 방 유형 */}
       <div data-no-drag>
         <DropdownPill
-          label={filters.home === '투룸' ? '투룸' : filters.home === '오피스텔' ? '오피스텔' : '원룸'}
-          active={filters.home !== '무관' && filters.home !== '원룸'}
+          label={filters.home === '전체' ? '전체' : filters.home === '투룸' ? '투룸' : filters.home === '오피스텔' ? '오피스텔' : filters.home === '원룸' ? '원룸' : '전체'}
+          active={filters.home !== '전체' && filters.home !== '무관'}
           value={filters.home}
           options={[
-            { value: '원룸',   label: '원룸' },
-            { value: '투룸',   label: '투룸' },
+            { value: '전체',    label: '전체' },
+            { value: '원룸',    label: '원룸' },
+            { value: '투룸',    label: '투룸' },
             { value: '오피스텔', label: '오피스텔' },
           ]}
           onChange={(v) => setFilters({ ...filters, home: v })}
@@ -618,7 +619,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     const carEstimated = !carData?.minutes;
 
     // 대중교통 기준으로 90분 초과 지역 제외
-    if (transitMin > 90 && carMin > 90) return;
+    if (transitMin > 30) return;
 
     // 생활권
     const life = facilityResults[idx] || region.defaultLife;
@@ -707,7 +708,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
 // ── ResultsPage ────────────────────────────────────────────────────
 export default function ResultsPage() {
   const router = useRouter();
-  const [filters, setFilters] = useState({ type: '전체', home: '무관', loan: false, sort: 'score' });
+  const [filters, setFilters] = useState({ type: '전체', home: '전체', loan: false, sort: 'score' });
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -808,7 +809,7 @@ export default function ResultsPage() {
       }
     })
     .filter((item) => {
-      if (filters.home !== '무관' && filters.home !== '원룸' && item._noHomeData) return false;
+      if (filters.home !== '전체' && filters.home !== '무관' && filters.home !== '원룸' && item._noHomeData) return false;
       if (!filters.loan && item.needsLoan) return false;
       return true;
     })
