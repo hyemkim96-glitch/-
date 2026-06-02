@@ -88,15 +88,13 @@ export default async function handler(req, res) {
   ];
 
   const months = recentMonths(3);
-  const rawResults = [];
-  for (const ym of months) {
-    const monthResults = await Promise.all(
+  const rawResults = await Promise.all(
+    months.flatMap((ym) =>
       endpoints.map((ep) =>
         fetchAll(`${BASE}/${ep}?serviceKey=${key.trim()}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}`)
       )
-    );
-    rawResults.push(...monthResults);
-  }
+    )
+  );
 
   const errors = rawResults.map((r) => r.error).filter(Boolean);
   const allItems = rawResults.flatMap((r) => r.items);
