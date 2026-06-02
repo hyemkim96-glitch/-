@@ -10,21 +10,33 @@ export default async function handler(req, res) {
   d.setMonth(d.getMonth() - 2);
   const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
 
-  // 공식 문서 기준 URL
-  const url = `https://apis.data.go.kr/1613000/RTMSDataSvcSHRent/getRTMSDataSvcSHRent?serviceKey=${key.trim()}&pageNo=1&numOfRows=10&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}`;
+  const endpoints = [
+    'RTMSDataSvcRHRent/getRTMSDataSvcRHRent',
+    'RTMSDataSvcSHRent/getRTMSDataSvcSHRent',
+    'RTMSDataSvcOffiRent/getRTMSDataSvcOffiRent',
+  ];
 
-  try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    const text = await r.text();
-    res.json({
-      ym, lawdCd,
-      httpStatus: r.status,
-      resultCode: text.match(/<resultCode>([^<]+)<\/resultCode>/)?.[1],
-      totalCount: text.match(/<totalCount>(\d+)<\/totalCount>/)?.[1],
-      itemCount: (text.match(/<item>/g) || []).length,
-      raw: text.slice(0, 600),
-    });
-  } catch (e) {
-    res.json({ error: e.message });
+  const results = {};
+  for (const ep of endpoints) {
+    const name = ep.split('/')[0];
+    const url = `https://apis.data.go.kr/1613000/${ep}?serviceKey=${key.trim()}&pageNo=1&numOfRows=100&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}`;
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const text = await r.text();
+      const floors = [...text.matchAll(/<item>[\s\S]*?<\/item>/g)].map((m) => {
+        const get = (tag) => m[0].match(new RegExp(`<${tag}>([^<]*)</${tag}>`))?.[1]?.trim() ?? '';
+        return get('층');
+      });
+      const floorCounts = floors.reduce((acc, f) => { acc[f] = (acc[f] || 0) + 1; return acc; }, {});
+      results[name] = {
+        totalCount: text.match(/<totalCount>(\d+)<\/totalCount>/)?.[1],
+        itemCount: floors.length,
+        floorValues: floorCounts,
+      };
+    } catch (e) {
+      results[name] = { error: e.message };
+    }
   }
+
+  res.json({ ym, lawdCd, results });
 }
