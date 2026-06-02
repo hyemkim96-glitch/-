@@ -106,9 +106,11 @@ export default async function handler(req, res) {
     return res.json(hit.data);
   }
 
-  // data.go.kr 포털에서 복사한 서비스키는 이미 URL 인코딩 상태
-  // encodeURIComponent 재적용 시 이중 인코딩(%2B → %252B)으로 HTTP 500 발생
-  const encodedKey = key;
+  // 포털 복사 키(이미 인코딩) 또는 raw 키 모두 처리:
+  // decode → encode 정규화로 이중 인코딩 방지
+  let encodedKey;
+  try { encodedKey = encodeURIComponent(decodeURIComponent(key)); }
+  catch { encodedKey = encodeURIComponent(key); }
 
   // 월별 순차, 월 내 3개 유형 병렬 (타임아웃 방지: 한 달 = ~1s)
   const endpoints = [

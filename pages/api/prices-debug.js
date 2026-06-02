@@ -6,7 +6,9 @@ export default async function handler(req, res) {
 
   if (!key) return res.json({ error: 'MOLIT_API_KEY not set' });
 
-  const encodedKey = key;
+  let encodedKey;
+  try { encodedKey = encodeURIComponent(decodeURIComponent(key)); }
+  catch { encodedKey = encodeURIComponent(key); }
   const d = new Date();
   d.setMonth(d.getMonth() - 2);
   const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
