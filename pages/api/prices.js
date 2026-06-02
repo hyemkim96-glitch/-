@@ -112,6 +112,8 @@ export default async function handler(req, res) {
   try { encodedKey = encodeURIComponent(decodeURIComponent(key)); }
   catch { encodedKey = encodeURIComponent(key); }
 
+  const months = recentMonths(3);
+
   // 월별 순차, 월 내 3개 유형 병렬 (타임아웃 방지: 한 달 = ~1s)
   const endpoints = [
     'getRTMSDataSvcRHRent',
