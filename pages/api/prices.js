@@ -1,8 +1,13 @@
-// GET /api/prices?lawdCd=11440&umdNm=합정동
+// GET /api/prices?lawdCd=11440
 // 국토교통부 실거래가 API로 전월세 평균 시세 조회
-// 원룸(연립다세대+단독다가구), 오피스텔, 아파트 세 유형 지원
+// 원룸(연립다세대+단독다가구+오피스텔) 지원
 
 const BASE = 'http://apis.data.go.kr/1613000';
+
+// 서버 사이드 캐시 — 같은 lawdCd는 6시간 동안 MOLIT 재호출 없음
+// (실거래 데이터는 하루에 몇 번만 갱신되므로 per-request 호출은 낭비)
+const _cache = {};
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6시간
 
 function classifyFloor(s) {
   const t = String(s || '').trim();
@@ -61,17 +66,22 @@ function isOneroom(area) { return area > 0 && area <= 33; }
 function isTworoom(area) { return area > 33 && area <= 66; }
 
 export default async function handler(req, res) {
-  const { lawdCd, umdNm } = req.query;
+  const { lawdCd } = req.query;
   const key = process.env.MOLIT_API_KEY;
 
   if (!key) return res.json({ error: 'MOLIT_API_KEY not set' });
-  if (!lawdCd || !umdNm) return res.json({ error: 'lawdCd, umdNm required' });
+  if (!lawdCd) return res.json({ error: 'lawdCd required' });
+
+  // 캐시 히트: 6시간 내 동일 lawdCd 요청은 MOLIT 재호출 없이 즉시 반환
+  const hit = _cache[lawdCd];
+  if (hit && Date.now() - hit.ts < CACHE_TTL) {
+    return res.json(hit.data);
+  }
 
   const months = recentMonths(2);
   const encodedKey = encodeURIComponent(key);
 
-  // 월별 순차 처리, 월 내에서는 3개 유형 병렬 (아파트 제외 — 원룸 검색 불필요)
-  // → 한 번에 최대 3개 MOLIT 호출로 rate limit 회피
+  // 월별 순차 처리, 월 내 3개 유형 병렬 (아파트 제외)
   const rawResults = [];
   for (const ym of months) {
     const monthResults = await Promise.all([
@@ -85,10 +95,8 @@ export default async function handler(req, res) {
   const errors = rawResults.map((r) => r.error).filter(Boolean);
   const allItems = rawResults.flatMap((r) => r.items);
 
-  // 유형별 분류
   const oneroom = allItems.filter((i) => isOneroom(i.area));
   const tworoom = allItems.filter((i) => isTworoom(i.area));
-  const apt = allItems; // 아파트는 면적 무관 (별도 구분 필요 시 추후 분리)
 
   const jeonsaItems = (arr) => arr.filter((i) => i.rent === 0 && i.deposit > 0);
   const wolseItems  = (arr) => arr.filter((i) => i.rent > 0);
@@ -100,20 +108,17 @@ export default async function handler(req, res) {
     count: arr.length,
   });
 
-  // 동별 원룸 시세 분류 (법정동명 기준)
   const dongMap = {};
   oneroom.forEach((item) => {
     if (!item.dong) return;
-    // '합정' → '합정동', '성수동1가'/'당산2가' 등 가·숫자 결미는 그대로 유지
-    const key = /[동가\d]$/.test(item.dong) ? item.dong : item.dong + '동';
-    if (!dongMap[key]) dongMap[key] = [];
-    dongMap[key].push(item);
+    const k = /[동가\d]$/.test(item.dong) ? item.dong : item.dong + '동';
+    if (!dongMap[k]) dongMap[k] = [];
+    dongMap[k].push(item);
   });
   const byDong = Object.fromEntries(
     Object.entries(dongMap).map(([dong, items]) => [dong, oneroomStats(items)])
   );
 
-  // 층 유형별 원룸 시세 분류
   const floorGroups = { '일반': [], '반지하': [], '옥탑': [] };
   oneroom.forEach((item) => {
     const fc = classifyFloor(item.floor);
@@ -121,7 +126,7 @@ export default async function handler(req, res) {
     else floorGroups['일반'].push(item);
   });
 
-  res.json({
+  const data = {
     oneroom: oneroomStats(oneroom),
     tworoom: {
       jeonsa: avg(jeonsaItems(tworoom).map((i) => Math.round(i.deposit / 10000))),
@@ -135,7 +140,13 @@ export default async function handler(req, res) {
     ),
     months,
     total: allItems.length,
-    // 진단: API 에러 발생 여부 확인용
     _errors: errors.length ? errors : undefined,
-  });
+  };
+
+  // 실제 데이터가 있을 때만 캐시 저장 (에러 응답은 캐시 안 함)
+  if (data.oneroom?.jeonsa || data.oneroom?.wolseRent) {
+    _cache[lawdCd] = { data, ts: Date.now() };
+  }
+
+  res.json(data);
 }
