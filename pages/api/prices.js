@@ -2,7 +2,7 @@
 // 국토교통부 실거래가 API로 전월세 평균 시세 조회
 // 원룸(연립다세대+단독다가구+오피스텔) 지원
 
-const BASE = 'http://apis.data.go.kr/1613000';
+const BASE = 'https://apis.data.go.kr/1613000';
 
 // 서버 사이드 캐시 — 같은 lawdCd는 6시간 동안 MOLIT 재호출 없음
 // (실거래 데이터는 하루에 몇 번만 갱신되므로 per-request 호출은 낭비)
