@@ -67,7 +67,7 @@ export default async function handler(req, res) {
   if (!key) return res.json({ error: 'MOLIT_API_KEY not set' });
   if (!lawdCd || !umdNm) return res.json({ error: 'lawdCd, umdNm required' });
 
-  const months = recentMonths(3);
+  const months = recentMonths(2);
   const encodedKey = encodeURIComponent(key);
 
   // 세 유형 × 3개월 병렬 호출

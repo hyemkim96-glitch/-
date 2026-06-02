@@ -566,6 +566,20 @@ CANDIDATE_REGIONS.forEach((r) => {
 });
 const candidatePriceByLawdCd = LAWDCD_PRICE;
 
+// MOLIT API rate limit 방지: items를 batchSize씩 나눠 순차 실행
+async function fetchInBatches(items, fn, batchSize, delayMs = 0) {
+  const results = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+    if (delayMs > 0 && i + batchSize < items.length) {
+      await new Promise((res) => setTimeout(res, delayMs));
+    }
+  }
+  return results;
+}
+
 async function buildResults({ asset, income, workLat, workLng, loan, loanRate, transport }) {
   const wx = workLng || 126.9780;
   const wy = workLat || 37.5665;
@@ -598,14 +612,22 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       .then((r) => r.json())
       .catch(() => null);
 
-  const [priceResults, commuteTransit, commuteCar, facilityResults] = await Promise.all([
-    Promise.all(uniqueLawdCds.map(async (lawdCd) => {
+  // 가격 요청은 5개씩 배치 처리 (MOLIT API rate limit 방지)
+  // 동시에 commute·facility 요청도 병렬 시작
+  const priceResultsPromise = fetchInBatches(
+    uniqueLawdCds,
+    async (lawdCd) => {
       try {
         const r = await fetch(`/api/prices?lawdCd=${lawdCd}&umdNm=`);
         if (r.ok) return [lawdCd, await r.json()];
       } catch {}
       return [lawdCd, null];
-    })),
+    },
+    5,   // 한 번에 5개 lawdCd
+    300  // 배치 간 300ms 대기
+  );
+
+  const [commuteTransit, commuteCar, facilityResults] = await Promise.all([
     Promise.all(candidatePool.map((region) => fetchCommute(region, '대중교통'))),
     Promise.all(candidatePool.map((region) => fetchCommute(region, '자가용'))),
     Promise.all(candidatePool.map(async (region) => {
@@ -620,6 +642,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     })),
   ]);
 
+  const priceResults = await priceResultsPromise;
   const priceCache = Object.fromEntries(priceResults);
 
   // byDong 조회: 정확 매칭 → 접두사 매칭(가/숫자 결미 동명 대응) → null
