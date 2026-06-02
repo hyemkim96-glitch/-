@@ -105,7 +105,7 @@ export default async function handler(req, res) {
   const months = recentMonths(2);
   const encodedKey = encodeURIComponent(key);
 
-  // 모든 MOLIT 호출을 순차 처리 (rate limit 방지: 동시 호출 1개)
+  // 월별 순차, 월 내 3개 유형 병렬 (타임아웃 방지: 한 달 = ~1s)
   const endpoints = [
     'getRTMSDataSvcRHRent',
     'getRTMSDataSvcSHRent',
@@ -113,11 +113,12 @@ export default async function handler(req, res) {
   ];
   const rawResults = [];
   for (const ym of months) {
-    for (const ep of endpoints) {
-      rawResults.push(
-        await fetchAll(`${BASE}/RTMSOBJSvc/${ep}?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`)
-      );
-    }
+    const monthResults = await Promise.all(
+      endpoints.map((ep) =>
+        fetchAll(`${BASE}/RTMSOBJSvc/${ep}?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`)
+      )
+    );
+    rawResults.push(...monthResults);
   }
 
   const errors = rawResults.map((r) => r.error).filter(Boolean);

@@ -566,7 +566,14 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     v && !v.error && (v.oneroom?.jeonsa || v.oneroom?.wolseRent)
   ).length;
   if (priceResults.length > 0 && priceSuccessCount === 0) {
-    throw new Error('PRICE_API_FAILED');
+    // 최상위 에러(API 키 미설정) 체크
+    const topErr = priceResults.find(([, v]) => v?.error)?.[1]?.error;
+    if (topErr) throw new Error(topErr);
+    // MOLIT 레벨 에러 코드 수집
+    const molitCode = priceResults
+      .flatMap(([, v]) => v?._errors || [])
+      .find(Boolean) || 'NO_DATA';
+    throw new Error(`PRICE_API_FAILED:${molitCode}`);
   }
 
   // byDong 조회: 정확 매칭 → 접두사 매칭(가/숫자 결미 동명 대응) → null
@@ -849,13 +856,24 @@ export default function ResultsPage() {
 
   // API 실패 에러 화면
   if (loadError) {
+    const isKeyMissing = loadError === 'MOLIT_API_KEY not set';
+    const molitCode = loadError.startsWith('PRICE_API_FAILED:')
+      ? loadError.replace('PRICE_API_FAILED:', '') : null;
+    const errorDetail = isKeyMissing
+      ? 'MOLIT_API_KEY 환경변수가 설정되지 않았습니다.'
+      : molitCode === '22' ? '국토부 API 요청 한도 초과 (코드 22). 잠시 후 다시 시도해주세요.'
+      : molitCode === '30' ? '등록되지 않은 서비스키입니다 (코드 30). API 키를 확인해주세요.'
+      : molitCode === '31' ? '만료된 서비스키입니다 (코드 31). API 키를 갱신해주세요.'
+      : molitCode === '32' ? 'IP 미등록 오류입니다 (코드 32). 공공데이터포털에서 IP 제한을 해제해주세요.'
+      : molitCode === 'NO_DATA' ? '해당 지역의 실거래 데이터가 없습니다.'
+      : molitCode === 'TIMEOUT' ? '국토부 API 응답 시간 초과입니다. 잠시 후 다시 시도해주세요.'
+      : `시세 데이터를 불러오지 못했습니다 (${molitCode || loadError}).`;
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 32px', textAlign: 'center', background: 'var(--bg)' }}>
         <div style={{ fontSize: 40 }}>⚠️</div>
         <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--ink)' }}>데이터 요청에 실패했습니다</div>
         <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-3)', lineHeight: 1.7 }}>
-          시세 데이터를 불러오지 못했습니다.<br />
-          잠시 후 다시 시도해주세요.
+          {errorDetail}
         </p>
         <button
           onClick={() => { setLoadError(null); setLoading(true); router.replace('/results'); }}
