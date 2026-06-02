@@ -7,11 +7,17 @@ on:
         description: 'Kakao REST API Key (없으면 시크릿 사용)'
         required: false
 
+permissions:
+  contents: write
+
 jobs:
   geocode:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: 필요 디렉토리 준비
+        run: mkdir -p data
 
       - uses: actions/setup-node@v4
         with:
