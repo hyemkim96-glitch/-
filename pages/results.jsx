@@ -539,8 +539,8 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       } catch {}
       return [lawdCd, null];
     },
-    5,   // 한 번에 5개 lawdCd
-    300  // 배치 간 300ms 대기
+    3,   // 한 번에 3개 lawdCd (서버당 최대 9개 MOLIT 동시 호출)
+    200  // 배치 간 200ms 대기
   );
 
   const [commuteTransit, commuteCar, facilityResults] = await Promise.all([

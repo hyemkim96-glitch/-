@@ -70,17 +70,17 @@ export default async function handler(req, res) {
   const months = recentMonths(2);
   const encodedKey = encodeURIComponent(key);
 
-  // 세 유형 × 3개월 병렬 호출
-  const rawResults = await Promise.all(months.flatMap((ym) => [
-    // 연립·다세대 (빌라, 원룸 포함)
-    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcRHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
-    // 단독·다가구 (원룸, 고시원 등)
-    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcSHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
-    // 오피스텔
-    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcOffiRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
-    // 아파트
-    fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcApartRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
-  ]));
+  // 월별 순차 처리, 월 내에서는 3개 유형 병렬 (아파트 제외 — 원룸 검색 불필요)
+  // → 한 번에 최대 3개 MOLIT 호출로 rate limit 회피
+  const rawResults = [];
+  for (const ym of months) {
+    const monthResults = await Promise.all([
+      fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcRHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
+      fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcSHRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
+      fetchAll(`${BASE}/RTMSOBJSvc/getRTMSDataSvcOffiRent?serviceKey=${encodedKey}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}&_type=xml`),
+    ]);
+    rawResults.push(...monthResults);
+  }
 
   const errors = rawResults.map((r) => r.error).filter(Boolean);
   const allItems = rawResults.flatMap((r) => r.items);
