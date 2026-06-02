@@ -340,6 +340,7 @@ function ExpandedSheet({ item, onClose, myAsset }) {
           </div>
           <div style={{ marginTop: 8, fontSize: 13.5, color: 'var(--ink-2)', fontWeight: 500 }}>
             최근 2개월 실거래 평균 <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{item.avgLabel}</span>
+            {item.tradeCount > 0 && <span style={{ marginLeft: 6, color: 'var(--ink-3)', fontSize: 12 }}>({item.tradeCount}건)</span>}
           </div>
           <div style={{ marginTop: 18, display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: '14px 0', overflow: 'hidden' }}>
             <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={`${item.monthlyMan}만원`} note="관리비 포함" />
@@ -664,6 +665,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
         depositForRent: opt.depositForRent,
         priceLabel,
         avgLabel,
+        tradeCount: priceBase.count || 0,
         capitalMan,
         monthlyMan,
         commuteMin: transitMin,
