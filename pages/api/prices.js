@@ -75,6 +75,7 @@ export default async function handler(req, res) {
   // 캐시 히트: 6시간 내 동일 lawdCd 요청은 MOLIT 재호출 없이 즉시 반환
   const hit = _cache[lawdCd];
   if (hit && Date.now() - hit.ts < CACHE_TTL) {
+    res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=43200');
     return res.json(hit.data);
   }
 
@@ -146,6 +147,9 @@ export default async function handler(req, res) {
   // 실제 데이터가 있을 때만 캐시 저장 (에러 응답은 캐시 안 함)
   if (data.oneroom?.jeonsa || data.oneroom?.wolseRent) {
     _cache[lawdCd] = { data, ts: Date.now() };
+    res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=43200');
+  } else {
+    res.setHeader('Cache-Control', 'no-store');
   }
 
   res.json(data);
