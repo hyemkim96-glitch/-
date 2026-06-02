@@ -158,21 +158,6 @@ function FilterBar({ filters, setFilters }) {
           onChange={(v) => setFilters({ ...filters, type: v })}
         />
       </div>
-      {/* 층 유형 필터 */}
-      <div data-no-drag>
-        <DropdownPill
-          label={filters.floor === '전체' ? '모든 층' : filters.floor}
-          active={filters.floor !== '전체'}
-          value={filters.floor}
-          options={[
-            { value: '전체',   label: '모든 층' },
-            { value: '일반',   label: '일반' },
-            { value: '반지하', label: '반지하' },
-            { value: '옥탑',   label: '옥탑' },
-          ]}
-          onChange={(v) => setFilters({ ...filters, floor: v })}
-        />
-      </div>
       {/* 대출 포함 토글 */}
       <TogglePill label="대출 포함" on={filters.loan} onClick={() => setFilters({ ...filters, loan: !filters.loan })} />
     </div>
@@ -690,8 +675,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
         breakdown,
         needsLoan: deposit > asset,
         maintenanceFee: region.maintenanceFee || 0,
-        byFloor: live?.byFloor || null,
-        _baseJeonsa: liveJeonsa,
+_baseJeonsa: liveJeonsa,
         _baseRent: liveRent,
         _baseRentDep: liveRentDep || 0,
       });
@@ -708,7 +692,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
 // ── ResultsPage ────────────────────────────────────────────────────
 export default function ResultsPage() {
   const router = useRouter();
-  const [filters, setFilters] = useState({ type: '전체', home: '무관', loan: false, floor: '전체', sort: 'score' });
+  const [filters, setFilters] = useState({ type: '전체', home: '무관', loan: false, sort: 'score' });
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -778,44 +762,6 @@ export default function ResultsPage() {
       if (filters.type === '전세만' && item.type !== '전세') return false;
       if (filters.type === '월세만' && item.type !== '월세') return false;
       return true;
-    })
-    .map((item) => {
-      // 층 유형 필터: MOLIT 실 데이터 있을 때만 가격 재계산, 없으면 원본 유지
-      if (filters.floor === '전체') return item;
-
-      const floorStats = item.byFloor?.[filters.floor];
-      if (!floorStats || floorStats.count === 0) return item;
-
-      if (item.type === '전세') {
-        const deposit = floorStats.jeonsa;
-        if (!deposit) return item;
-        const loanNeeded = Math.max(0, deposit - myAsset);
-        const newMonthly = Math.round((loanNeeded * 0.035) / 12) + (item.maintenanceFee || 0);
-        return {
-          ...item,
-          depositMan: deposit,
-          capitalMan: deposit,
-          monthlyMan: newMonthly,
-          priceLabel: formatKRW(deposit),
-          avgLabel: formatKRW(deposit),
-          needsLoan: deposit > myAsset,
-        };
-      } else {
-        const rent = floorStats.wolseRent;
-        const depAmt = floorStats.wolseDeposit || 0;
-        if (!rent) return item;
-        const loanNeeded = Math.max(0, depAmt - myAsset);
-        const newMonthly = Math.round((loanNeeded * 0.035) / 12) + rent + (item.maintenanceFee || 0);
-        return {
-          ...item,
-          depositMan: depAmt,
-          depositForRent: depAmt,
-          monthlyMan: newMonthly,
-          priceLabel: `보증금 ${formatKRW(depAmt)} · 월 ${rent}만원`,
-          avgLabel: `보증금 ${formatKRW(depAmt)} / 월 ${rent}만원`,
-          needsLoan: depAmt > myAsset,
-        };
-      }
     })
     .filter((item) => {
       if (!filters.loan && item.needsLoan) return false;

@@ -7,13 +7,6 @@ const BASE = 'https://apis.data.go.kr/1613000';
 const _cache = {};
 const CACHE_TTL = 6 * 60 * 60 * 1000;
 
-function classifyFloor(s) {
-  const t = String(s || '').trim();
-  if (/반지하|반지/.test(t)) return '반지하';
-  if (/옥탑/.test(t)) return '옥탑';
-  if (/지하|^[Bb]\d*$/.test(t) || (/^-?\d+$/.test(t) && parseInt(t) < 0)) return '반지하';
-  return '일반';
-}
 
 function parseItems(text) {
   return [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
@@ -30,7 +23,6 @@ function parseItems(text) {
       rent:    parseInt(rentRaw.replace(/,/g, '') || '0', 10),
       area:    parseFloat(areaRaw || '0'),
       dong:    (get('umdNm') || get('법정동') || get('법정동명')).trim(),
-      floor:   get('층') || '',
     };
   });
 }
@@ -130,12 +122,6 @@ export default async function handler(req, res) {
     dongMap[k].push(item);
   });
 
-  const floorGroups = { '일반': [], '반지하': [], '옥탑': [] };
-  oneroom.forEach((item) => {
-    const fc = classifyFloor(item.floor);
-    floorGroups[fc] ? floorGroups[fc].push(item) : floorGroups['일반'].push(item);
-  });
-
   const data = {
     oneroom: oneroomStats(oneroom),
     tworoom: {
@@ -146,9 +132,6 @@ export default async function handler(req, res) {
     },
     byDong: Object.fromEntries(
       Object.entries(dongMap).map(([dong, items]) => [dong, oneroomStats(items)])
-    ),
-    byFloor: Object.fromEntries(
-      Object.entries(floorGroups).map(([k, v]) => [k, oneroomStats(v)])
     ),
     months,
     total: allItems.length,
