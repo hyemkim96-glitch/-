@@ -503,36 +503,36 @@ function normalizeRegion(r) {
 // 서울 25개 구 + 주요 경기 시군구 lawdCd별 원룸 기준 추정가 (만원)
 // avgRentDepMan: 월세 원룸 평균 보증금 (만원) — 10%공식 대신 현실적 수치 사용
 const LAWDCD_PRICE = {
-  // 서울 — 강남 3구
-  '11680': { avgJeonsaMan: 28000, avgRentMan: 130, avgRentDepMan: 1000 }, // 강남구
-  '11650': { avgJeonsaMan: 26000, avgRentMan: 110, avgRentDepMan:  900 }, // 서초구
-  '11710': { avgJeonsaMan: 22000, avgRentMan:  90, avgRentDepMan:  800 }, // 송파구
+  // 서울 — 강남 3구 (원룸 33㎡ 이하 실거래 평균 기준, 2024-2025)
+  '11680': { avgJeonsaMan: 33000, avgRentMan: 150, avgRentDepMan: 1200 }, // 강남구
+  '11650': { avgJeonsaMan: 31000, avgRentMan: 130, avgRentDepMan: 1100 }, // 서초구
+  '11710': { avgJeonsaMan: 25000, avgRentMan: 100, avgRentDepMan:  900 }, // 송파구
   // 서울 — 도심·한강이북
-  '11110': { avgJeonsaMan: 20000, avgRentMan:  75, avgRentDepMan:  800 }, // 종로구
-  '11140': { avgJeonsaMan: 19500, avgRentMan:  72, avgRentDepMan:  700 }, // 중구
-  '11170': { avgJeonsaMan: 19000, avgRentMan:  80, avgRentDepMan:  800 }, // 용산구
-  '11200': { avgJeonsaMan: 19500, avgRentMan:  78, avgRentDepMan:  700 }, // 성동구
-  '11440': { avgJeonsaMan: 17500, avgRentMan:  65, avgRentDepMan:  600 }, // 마포구
-  '11410': { avgJeonsaMan: 14000, avgRentMan:  55, avgRentDepMan:  500 }, // 서대문구
-  '11215': { avgJeonsaMan: 15000, avgRentMan:  58, avgRentDepMan:  500 }, // 광진구
-  '11230': { avgJeonsaMan: 13000, avgRentMan:  50, avgRentDepMan:  400 }, // 동대문구
-  '11290': { avgJeonsaMan: 12500, avgRentMan:  48, avgRentDepMan:  400 }, // 성북구
+  '11110': { avgJeonsaMan: 22000, avgRentMan:  80, avgRentDepMan:  900 }, // 종로구
+  '11140': { avgJeonsaMan: 21000, avgRentMan:  78, avgRentDepMan:  800 }, // 중구
+  '11170': { avgJeonsaMan: 25000, avgRentMan:  95, avgRentDepMan: 1000 }, // 용산구
+  '11200': { avgJeonsaMan: 22000, avgRentMan:  85, avgRentDepMan:  800 }, // 성동구
+  '11440': { avgJeonsaMan: 19000, avgRentMan:  70, avgRentDepMan:  700 }, // 마포구
+  '11410': { avgJeonsaMan: 15000, avgRentMan:  58, avgRentDepMan:  500 }, // 서대문구
+  '11215': { avgJeonsaMan: 17000, avgRentMan:  63, avgRentDepMan:  600 }, // 광진구
+  '11230': { avgJeonsaMan: 14000, avgRentMan:  53, avgRentDepMan:  400 }, // 동대문구
+  '11290': { avgJeonsaMan: 13500, avgRentMan:  50, avgRentDepMan:  400 }, // 성북구
   // 서울 — 동남권
-  '11740': { avgJeonsaMan: 18000, avgRentMan:  65, avgRentDepMan:  600 }, // 강동구
-  '11260': { avgJeonsaMan: 11000, avgRentMan:  44, avgRentDepMan:  300 }, // 중랑구
+  '11740': { avgJeonsaMan: 20000, avgRentMan:  70, avgRentDepMan:  700 }, // 강동구
+  '11260': { avgJeonsaMan: 12000, avgRentMan:  46, avgRentDepMan:  300 }, // 중랑구
   // 서울 — 서남권
-  '11560': { avgJeonsaMan: 16000, avgRentMan:  57, avgRentDepMan:  500 }, // 영등포구
-  '11470': { avgJeonsaMan: 14500, avgRentMan:  52, avgRentDepMan:  400 }, // 양천구
-  '11500': { avgJeonsaMan: 13500, avgRentMan:  50, avgRentDepMan:  400 }, // 강서구
-  '11530': { avgJeonsaMan: 12000, avgRentMan:  46, avgRentDepMan:  300 }, // 구로구
-  '11545': { avgJeonsaMan: 10500, avgRentMan:  42, avgRentDepMan:  300 }, // 금천구
-  '11590': { avgJeonsaMan: 13500, avgRentMan:  55, avgRentDepMan:  400 }, // 동작구
-  '11620': { avgJeonsaMan: 11500, avgRentMan:  47, avgRentDepMan:  300 }, // 관악구
+  '11560': { avgJeonsaMan: 17000, avgRentMan:  60, avgRentDepMan:  600 }, // 영등포구
+  '11470': { avgJeonsaMan: 15500, avgRentMan:  55, avgRentDepMan:  400 }, // 양천구
+  '11500': { avgJeonsaMan: 14500, avgRentMan:  52, avgRentDepMan:  400 }, // 강서구
+  '11530': { avgJeonsaMan: 13000, avgRentMan:  48, avgRentDepMan:  300 }, // 구로구
+  '11545': { avgJeonsaMan: 11000, avgRentMan:  44, avgRentDepMan:  300 }, // 금천구
+  '11590': { avgJeonsaMan: 15000, avgRentMan:  58, avgRentDepMan:  500 }, // 동작구
+  '11620': { avgJeonsaMan: 12500, avgRentMan:  49, avgRentDepMan:  300 }, // 관악구
   // 서울 — 강북 외곽
-  '11305': { avgJeonsaMan:  9500, avgRentMan:  39, avgRentDepMan:  200 }, // 강북구
-  '11320': { avgJeonsaMan:  9000, avgRentMan:  38, avgRentDepMan:  200 }, // 도봉구
-  '11350': { avgJeonsaMan:  9500, avgRentMan:  39, avgRentDepMan:  200 }, // 노원구
-  '11380': { avgJeonsaMan: 10500, avgRentMan:  42, avgRentDepMan:  300 }, // 은평구
+  '11305': { avgJeonsaMan: 10500, avgRentMan:  41, avgRentDepMan:  200 }, // 강북구
+  '11320': { avgJeonsaMan:  9500, avgRentMan:  39, avgRentDepMan:  200 }, // 도봉구
+  '11350': { avgJeonsaMan: 10000, avgRentMan:  40, avgRentDepMan:  200 }, // 노원구
+  '11380': { avgJeonsaMan: 11500, avgRentMan:  44, avgRentDepMan:  300 }, // 은평구
   // 경기 주요 시군구
   '41111': { avgJeonsaMan: 10000, avgRentMan:  40, avgRentDepMan:  200 }, // 수원 장안구
   '41113': { avgJeonsaMan:  9500, avgRentMan:  38, avgRentDepMan:  200 }, // 수원 권선구
