@@ -8,7 +8,7 @@ import { MapCanvas } from '../components/layout/Screen';
 import {
   IconMap, IconHome, IconWalk, IconWallet, IconWon,
   IconSubway, IconStore, IconCart, IconHospital, IconChevDown, IconClose,
-  IconExternal, IconPin, IconChevRight, IconList,
+  IconExternal, IconPin, IconChevRight, IconList, IconCar,
 } from '../components/icons';
 
 // ── DropdownPill: 클릭 시 드롭다운 펼치는 필터 칩 ─────────────────
@@ -196,8 +196,8 @@ function ResultCard({ item, onExpand, index = 0 }) {
       </div>
       <div style={{ marginTop: 15, display: 'flex', gap: 14, flexWrap: 'wrap', rowGap: 8 }}>
         <MiniStat label="월 고정비" value={`${item.monthlyMan}만원`} />
-        <MiniStat label="" value={item.transitLabel} />
-        <MiniStat label="" value={item.carLabel} />
+        <MiniStat icon={<IconSubway size={14} />} value={item.transitLabel} />
+        <MiniStat icon={<IconCar size={14} />} value={item.carLabel} />
       </div>
     </div>
   );
@@ -350,9 +350,9 @@ function ExpandedSheet({ item, onClose, myAsset }) {
           <div style={{ marginTop: 18, display: 'flex', background: 'var(--bg)', borderRadius: 14, padding: '14px 0', overflow: 'hidden' }}>
             <DetailStat icon={<IconWon size={21} />} label="월 고정비" value={`${item.monthlyMan}만원`} note="관리비 포함" />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
-            <DetailStat icon={<IconWalk size={21} />} label="대중교통" value={item.transitLabel} />
+            <DetailStat icon={<IconSubway size={21} />} label="대중교통" value={item.transitLabel} />
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
-            <DetailStat icon={<IconWalk size={21} />} label="자가용" value={item.carLabel} />
+            <DetailStat icon={<IconCar size={21} />} label="자가용" value={item.carLabel} />
           </div>
           {item.breakdown && (
             <>
@@ -698,8 +698,8 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
           ? formatKRW(liveJeonsa)
           : `보증금 ${formatKRW(liveRentDep)} / 월 ${liveRent}만원`)
         : null;
-      const transitLabel = `🚇 ${transitMin}분${transitEstimated ? '*' : ''}`;
-      const carLabel = `🚗 ${carMin}분${carEstimated ? '*' : ''}`;
+      const transitLabel = `${transitMin}분${transitEstimated ? '*' : ''}`;
+      const carLabel = `${carMin}분${carEstimated ? '*' : ''}`;
 
       results.push({
         id: `${region.id}_${opt.type}`,
