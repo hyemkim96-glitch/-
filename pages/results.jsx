@@ -561,9 +561,11 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
   const priceResults = await priceResultsPromise;
   const priceCache = Object.fromEntries(priceResults);
 
-  // 가격 API 성공률 확인 — 절반 이상 실패하면 에러
-  const priceSuccessCount = priceResults.filter(([, v]) => v !== null).length;
-  if (priceResults.length > 0 && priceSuccessCount < priceResults.length * 0.5) {
+  // 가격 API 성공률 확인 — 실제 jeonsa/wolseRent 값이 하나도 없으면 에러
+  const priceSuccessCount = priceResults.filter(([, v]) =>
+    v && !v.error && (v.oneroom?.jeonsa || v.oneroom?.wolseRent)
+  ).length;
+  if (priceResults.length > 0 && priceSuccessCount === 0) {
     throw new Error('PRICE_API_FAILED');
   }
 
@@ -593,7 +595,8 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     const live = region.lawdCd ? priceCache[region.lawdCd] : null;
     const dongStats = findDongStats(live?.byDong, region.dong);
     const priceBase = dongStats || live?.oneroom || null;
-    if (!priceBase) return; // 실 데이터 없으면 표시 안 함
+    // 실 데이터 없거나 jeonsa·rent 둘 다 null이면 건너뜀
+    if (!priceBase || (!priceBase.jeonsa && !priceBase.wolseRent)) return;
 
     const liveJeonsa  = priceBase.jeonsa;
     const liveRent    = priceBase.wolseRent;
