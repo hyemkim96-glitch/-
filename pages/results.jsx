@@ -620,8 +620,8 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     const carMin = carData?.minutes ?? estimateCommute(km, '자가용');
     const carEstimated = !carData?.minutes;
 
-    // 대중교통 기준으로 90분 초과 지역 제외
-    if (transitMin > 90 && carMin > 90) return;
+    // 대중교통 기준으로 60분 초과 지역 제외
+    if (transitMin > 60) return;
 
     // 생활권
     const life = facilityResults[idx] || region.defaultLife;
