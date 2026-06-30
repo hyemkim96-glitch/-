@@ -651,7 +651,6 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       const ps = priceScore(monthlyMan, income);
       const ls = lifeScore(life, CANDIDATE_REGIONS.map((r) => r.defaultLife));
       const score = totalScore(cs, ps, ls);
-      if (score < 40) continue;
 
       const breakdown = {
         commute: Math.round(cs * 100),
@@ -819,6 +818,8 @@ export default function ResultsPage() {
     })
     .filter((item) => {
       if (!filters.loan && item.needsLoan) return false;
+      // 추천순일 때만 낮은 점수 지역 제외
+      if (filters.sort === 'score' && item.score < 40) return false;
       return true;
     })
     .sort((a, b) => {
