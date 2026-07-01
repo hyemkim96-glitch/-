@@ -496,6 +496,19 @@ async function fetchInBatches(items, fn, batchSize, delayMs = 0) {
   return results;
 }
 
+// lawdCd 가격 데이터 sessionStorage 캐시 (월 단위 TTL)
+const PRICE_CACHE_KEY = `zipter_prices_${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+function getPriceCache() {
+  try { return JSON.parse(sessionStorage.getItem(PRICE_CACHE_KEY) || '{}'); } catch { return {}; }
+}
+function setPriceCache(lawdCd, data) {
+  try {
+    const cache = getPriceCache();
+    cache[lawdCd] = data;
+    sessionStorage.setItem(PRICE_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
 async function buildResults({ asset, income, workLat, workLng, loan, loanRate, transport }) {
   const wx = workLng || 126.9780;
   const wy = workLat || 37.5665;
@@ -506,8 +519,8 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     const regRes = await fetch('/api/regions');
     const regData = await regRes.json();
     if (regData.nationwide && regData.regions.length > 0) {
-      // 구별로 가장 가까운 동 최대 2개 유지, 최대 25개 구(= 최대 50개 동)
-      // 단순 slice(35)는 가까운 구의 동들만 채워 중랑구처럼 약간 먼 구가 누락됨
+      // 구별로 가장 가까운 동 최대 2개 유지, 최대 15개 구(= 최대 30개 동)
+      // 단순 slice는 가까운 구의 동들만 채워 외곽 구가 누락됨
       const guCount = {};
       const sorted = regData.regions
         .map(normalizeRegion)
@@ -522,7 +535,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
           guCount[key] = (guCount[key] || 0) + 1;
           return guCount[key] <= 2;
         })
-        .slice(0, 50);
+        .slice(0, 30);
     } else {
       candidatePool = CANDIDATE_REGIONS.map(normalizeRegion);
     }
@@ -539,17 +552,24 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
 
   // 가격 요청은 2개씩 배치 처리 (MOLIT API rate limit 방지)
   // 동시에 commute·facility 요청도 병렬 시작
+  const priceCache = getPriceCache();
+  const uncachedLawdCds = uniqueLawdCds.filter((cd) => !(cd in priceCache));
+
   const priceResultsPromise = fetchInBatches(
-    uniqueLawdCds,
+    uncachedLawdCds,
     async (lawdCd) => {
       try {
         const r = await fetch(`/api/prices?lawdCd=${lawdCd}`);
-        if (r.ok) return [lawdCd, await r.json()];
+        if (r.ok) {
+          const data = await r.json();
+          setPriceCache(lawdCd, data);
+          return [lawdCd, data];
+        }
       } catch {}
       return [lawdCd, null];
     },
     2,   // 한 번에 2개 lawdCd (서버당 최대 2개 MOLIT 동시 호출)
-    400  // 배치 간 400ms 대기
+    200  // 배치 간 200ms 대기 (MOLIT 제한 이내)
   );
 
   const [commuteTransit, commuteCar, facilityResults] = await Promise.all([
@@ -567,19 +587,24 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     })),
   ]);
 
-  const priceResults = await priceResultsPromise;
-  const priceCache = Object.fromEntries(priceResults);
+  const freshPriceResults = await priceResultsPromise;
+  // 캐시 hit 결과 + 새로 받아온 결과 합치기
+  const cachedEntries = uniqueLawdCds
+    .filter((cd) => cd in priceCache)
+    .map((cd) => [cd, priceCache[cd]]);
+  const allPriceResults = [...cachedEntries, ...freshPriceResults];
+  const priceCacheMap = Object.fromEntries(allPriceResults);
 
   // 가격 API 성공률 확인 — 실제 jeonsa/wolseRent 값이 하나도 없으면 에러
-  const priceSuccessCount = priceResults.filter(([, v]) =>
+  const priceSuccessCount = allPriceResults.filter(([, v]) =>
     v && !v.error && (v.oneroom?.jeonsa || v.oneroom?.wolseRent)
   ).length;
-  if (priceResults.length > 0 && priceSuccessCount === 0) {
+  if (allPriceResults.length > 0 && priceSuccessCount === 0) {
     // 최상위 에러(API 키 미설정) 체크
-    const topErr = priceResults.find(([, v]) => v?.error)?.[1]?.error;
+    const topErr = allPriceResults.find(([, v]) => v?.error)?.[1]?.error;
     if (topErr) throw new Error(topErr);
     // MOLIT 레벨 에러 코드 수집
-    const molitCode = priceResults
+    const molitCode = allPriceResults
       .flatMap(([, v]) => v?._errors || [])
       .find(Boolean) || 'NO_DATA';
     throw new Error(`PRICE_API_FAILED:${molitCode}`);
@@ -608,7 +633,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
   const results = [];
   candidatePool.forEach((region, idx) => {
     // MOLIT 실거래가: 동 단위 우선, 없으면 구 평균. 둘 다 없으면 이 지역 건너뜀
-    const live = region.lawdCd ? priceCache[region.lawdCd] : null;
+    const live = region.lawdCd ? priceCacheMap[region.lawdCd] : null;
     const dongStats = findDongStats(live?.byDong, region.dong);
     const priceBase = dongStats || live?.oneroom || null;
     // 실 데이터 없거나 jeonsa·rent 둘 다 null이면 건너뜀
