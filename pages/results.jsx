@@ -550,7 +550,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       .then((r) => r.json())
       .catch(() => null);
 
-  // 가격 요청은 2개씩 배치 처리 (MOLIT API rate limit 방지)
+  // 가격 요청은 3개씩 배치 처리 (MOLIT API rate limit 방지)
   // 동시에 commute·facility 요청도 병렬 시작
   const priceCache = getPriceCache();
   const uncachedLawdCds = uniqueLawdCds.filter((cd) => !(cd in priceCache));
@@ -568,8 +568,8 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       } catch {}
       return [lawdCd, null];
     },
-    2,   // 한 번에 2개 lawdCd (서버당 최대 2개 MOLIT 동시 호출)
-    200  // 배치 간 200ms 대기 (MOLIT 제한 이내)
+    3,   // 한 번에 3개 lawdCd
+    100  // 배치 간 100ms 대기
   );
 
   const [commuteTransit, commuteCar, facilityResults] = await Promise.all([
