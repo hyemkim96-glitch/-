@@ -506,14 +506,23 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     const regRes = await fetch('/api/regions');
     const regData = await regRes.json();
     if (regData.nationwide && regData.regions.length > 0) {
-      candidatePool = regData.regions
+      // 구별로 가장 가까운 동 최대 2개 유지, 최대 25개 구(= 최대 50개 동)
+      // 단순 slice(35)는 가까운 구의 동들만 채워 중랑구처럼 약간 먼 구가 누락됨
+      const guCount = {};
+      const sorted = regData.regions
         .map(normalizeRegion)
         .filter((r) => haversineKm(wy, wx, r.coords.lat, r.coords.lng) <= 45)
         .sort((a, b) =>
           haversineKm(wy, wx, a.coords.lat, a.coords.lng) -
           haversineKm(wy, wx, b.coords.lat, b.coords.lng)
-        )
-        .slice(0, 35);
+        );
+      candidatePool = sorted
+        .filter((r) => {
+          const key = r.lawdCd || r.id;
+          guCount[key] = (guCount[key] || 0) + 1;
+          return guCount[key] <= 2;
+        })
+        .slice(0, 50);
     } else {
       candidatePool = CANDIDATE_REGIONS.map(normalizeRegion);
     }
