@@ -37,13 +37,13 @@ function parseItems(text) {
 
 async function fetchAll(url) {
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
     const text = await r.text();
     const resultCode = text.match(/<resultCode>([^<]+)<\/resultCode>/)?.[1];
     // 022: 요청 제한 → 500ms 후 1회 재시도
     if (resultCode === '022') {
       await new Promise((res) => setTimeout(res, 500));
-      const r2 = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const r2 = await fetch(url, { signal: AbortSignal.timeout(8000) });
       const text2 = await r2.text();
       const code2 = text2.match(/<resultCode>([^<]+)<\/resultCode>/)?.[1];
       if (code2 && code2 !== '000') return { error: code2, items: [] };

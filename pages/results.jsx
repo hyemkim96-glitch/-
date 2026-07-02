@@ -459,10 +459,10 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 직선거리 기반 출퇴근 시간 추정 (전국 평균 속도 기준)
+// 직선거리 기반 출퇴근 시간 추정 (api/commute.js fallback과 동일 공식)
 function estimateCommute(km, transport) {
-  if (transport === '자가용') return Math.round(km / 25 * 60 + 5);
-  return Math.round(km / 25 * 60 + 10);
+  const minPerKm = transport === '자가용' ? 1.5 : 3;
+  return Math.round(km * minPerKm + 5);
 }
 
 // JSON 지역 → 앱 포맷 변환
@@ -562,7 +562,10 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
         const r = await fetch(`/api/prices?lawdCd=${lawdCd}`);
         if (r.ok) {
           const data = await r.json();
-          setPriceCache(lawdCd, data);
+          // 유효한 시세가 있을 때만 캐시 (rate limit 등 실패 응답이 세션 내내 남는 것 방지)
+          if (!data.error && (data.oneroom?.jeonsa || data.oneroom?.wolseRent)) {
+            setPriceCache(lawdCd, data);
+          }
           return [lawdCd, data];
         }
       } catch {}
@@ -648,14 +651,15 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
 
     const transitData = commuteTransit[idx];
     const transitMin = transitData?.minutes ?? estimateCommute(km, '대중교통');
-    const transitEstimated = !transitData?.minutes;
+    const transitEstimated = transitData?.isEstimated !== false;
 
     const carData = commuteCar[idx];
     const carMin = carData?.minutes ?? estimateCommute(km, '자가용');
-    const carEstimated = !carData?.minutes;
+    const carEstimated = carData?.isEstimated !== false;
 
-    // 대중교통 기준으로 60분 초과 지역 제외
-    if (transitMin > 60) return;
+    // 사용자가 선택한 교통수단 기준으로 60분 초과 지역 제외
+    const cutoffMin = transport === '자가용' ? carMin : transitMin;
+    if (cutoffMin > 60) return;
 
     // 생활권
     const life = facilityResults[idx] || region.defaultLife;
