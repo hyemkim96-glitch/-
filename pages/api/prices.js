@@ -18,7 +18,7 @@ function classifyFloor(s) {
 function parseItems(text) {
   return [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
     const get = (tag) => {
-      const match = m[1].match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
+      const match = m[1].match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
       return match ? match[1].trim() : '';
     };
     // 신규 API: 영문 필드명 (deposit, monthlyRent, totalFloorAr, umdNm)
@@ -37,13 +37,13 @@ function parseItems(text) {
 
 async function fetchAll(url) {
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
     const text = await r.text();
     const resultCode = text.match(/<resultCode>([^<]+)<\/resultCode>/)?.[1];
     // 022: 요청 제한 → 500ms 후 1회 재시도
     if (resultCode === '022') {
       await new Promise((res) => setTimeout(res, 500));
-      const r2 = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      const r2 = await fetch(url, { signal: AbortSignal.timeout(8000) });
       const text2 = await r2.text();
       const code2 = text2.match(/<resultCode>([^<]+)<\/resultCode>/)?.[1];
       if (code2 && code2 !== '000') return { error: code2, items: [] };
@@ -96,15 +96,14 @@ export default async function handler(req, res) {
   ];
 
   const months = recentMonths(3);
-  const rawResults = [];
-  for (const ym of months) {
-    const monthResults = await Promise.all(
+  // 3개월 × 3개 endpoint를 한 번에 병렬 호출 (순차 루프 대비 3배 빠름)
+  const rawResults = await Promise.all(
+    months.flatMap((ym) =>
       endpoints.map((ep) =>
         fetchAll(`${BASE}/${ep}?serviceKey=${key.trim()}&pageNo=1&numOfRows=1000&DEAL_YMD=${ym}&LAWD_CD=${lawdCd}`)
       )
-    );
-    rawResults.push(...monthResults);
-  }
+    )
+  );
 
   const errors = rawResults.map((r) => r.error).filter(Boolean);
   const allItems = rawResults.flatMap((r) => r.items);

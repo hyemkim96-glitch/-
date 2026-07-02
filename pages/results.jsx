@@ -459,10 +459,10 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 직선거리 기반 출퇴근 시간 추정 (전국 평균 속도 기준)
+// 직선거리 기반 출퇴근 시간 추정 (api/commute.js fallback과 동일 공식)
 function estimateCommute(km, transport) {
-  if (transport === '자가용') return Math.round(km / 25 * 60 + 5);
-  return Math.round(km / 25 * 60 + 10);
+  const minPerKm = transport === '자가용' ? 1.5 : 3;
+  return Math.round(km * minPerKm + 5);
 }
 
 // JSON 지역 → 앱 포맷 변환
@@ -496,6 +496,19 @@ async function fetchInBatches(items, fn, batchSize, delayMs = 0) {
   return results;
 }
 
+// lawdCd 가격 데이터 sessionStorage 캐시 (월 단위 TTL)
+const PRICE_CACHE_KEY = `zipter_prices_${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+function getPriceCache() {
+  try { return JSON.parse(sessionStorage.getItem(PRICE_CACHE_KEY) || '{}'); } catch { return {}; }
+}
+function setPriceCache(lawdCd, data) {
+  try {
+    const cache = getPriceCache();
+    cache[lawdCd] = data;
+    sessionStorage.setItem(PRICE_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
 async function buildResults({ asset, income, workLat, workLng, loan, loanRate, transport }) {
   const wx = workLng || 126.9780;
   const wy = workLat || 37.5665;
@@ -506,14 +519,23 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     const regRes = await fetch('/api/regions');
     const regData = await regRes.json();
     if (regData.nationwide && regData.regions.length > 0) {
-      candidatePool = regData.regions
+      // 구별로 가장 가까운 동 최대 2개 유지, 최대 15개 구(= 최대 30개 동)
+      // 단순 slice는 가까운 구의 동들만 채워 외곽 구가 누락됨
+      const guCount = {};
+      const sorted = regData.regions
         .map(normalizeRegion)
         .filter((r) => haversineKm(wy, wx, r.coords.lat, r.coords.lng) <= 45)
         .sort((a, b) =>
           haversineKm(wy, wx, a.coords.lat, a.coords.lng) -
           haversineKm(wy, wx, b.coords.lat, b.coords.lng)
-        )
-        .slice(0, 35);
+        );
+      candidatePool = sorted
+        .filter((r) => {
+          const key = r.lawdCd || r.id;
+          guCount[key] = (guCount[key] || 0) + 1;
+          return guCount[key] <= 2;
+        })
+        .slice(0, 30);
     } else {
       candidatePool = CANDIDATE_REGIONS.map(normalizeRegion);
     }
@@ -528,19 +550,29 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       .then((r) => r.json())
       .catch(() => null);
 
-  // 가격 요청은 2개씩 배치 처리 (MOLIT API rate limit 방지)
+  // 가격 요청은 3개씩 배치 처리 (MOLIT API rate limit 방지)
   // 동시에 commute·facility 요청도 병렬 시작
+  const priceCache = getPriceCache();
+  const uncachedLawdCds = uniqueLawdCds.filter((cd) => !(cd in priceCache));
+
   const priceResultsPromise = fetchInBatches(
-    uniqueLawdCds,
+    uncachedLawdCds,
     async (lawdCd) => {
       try {
         const r = await fetch(`/api/prices?lawdCd=${lawdCd}`);
-        if (r.ok) return [lawdCd, await r.json()];
+        if (r.ok) {
+          const data = await r.json();
+          // 유효한 시세가 있을 때만 캐시 (rate limit 등 실패 응답이 세션 내내 남는 것 방지)
+          if (!data.error && (data.oneroom?.jeonsa || data.oneroom?.wolseRent)) {
+            setPriceCache(lawdCd, data);
+          }
+          return [lawdCd, data];
+        }
       } catch {}
       return [lawdCd, null];
     },
-    2,   // 한 번에 2개 lawdCd (서버당 최대 2개 MOLIT 동시 호출)
-    400  // 배치 간 400ms 대기
+    3,   // 한 번에 3개 lawdCd
+    100  // 배치 간 100ms 대기
   );
 
   const [commuteTransit, commuteCar, facilityResults] = await Promise.all([
@@ -558,19 +590,24 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
     })),
   ]);
 
-  const priceResults = await priceResultsPromise;
-  const priceCache = Object.fromEntries(priceResults);
+  const freshPriceResults = await priceResultsPromise;
+  // 캐시 hit 결과 + 새로 받아온 결과 합치기
+  const cachedEntries = uniqueLawdCds
+    .filter((cd) => cd in priceCache)
+    .map((cd) => [cd, priceCache[cd]]);
+  const allPriceResults = [...cachedEntries, ...freshPriceResults];
+  const priceCacheMap = Object.fromEntries(allPriceResults);
 
   // 가격 API 성공률 확인 — 실제 jeonsa/wolseRent 값이 하나도 없으면 에러
-  const priceSuccessCount = priceResults.filter(([, v]) =>
+  const priceSuccessCount = allPriceResults.filter(([, v]) =>
     v && !v.error && (v.oneroom?.jeonsa || v.oneroom?.wolseRent)
   ).length;
-  if (priceResults.length > 0 && priceSuccessCount === 0) {
+  if (allPriceResults.length > 0 && priceSuccessCount === 0) {
     // 최상위 에러(API 키 미설정) 체크
-    const topErr = priceResults.find(([, v]) => v?.error)?.[1]?.error;
+    const topErr = allPriceResults.find(([, v]) => v?.error)?.[1]?.error;
     if (topErr) throw new Error(topErr);
     // MOLIT 레벨 에러 코드 수집
-    const molitCode = priceResults
+    const molitCode = allPriceResults
       .flatMap(([, v]) => v?._errors || [])
       .find(Boolean) || 'NO_DATA';
     throw new Error(`PRICE_API_FAILED:${molitCode}`);
@@ -599,7 +636,7 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
   const results = [];
   candidatePool.forEach((region, idx) => {
     // MOLIT 실거래가: 동 단위 우선, 없으면 구 평균. 둘 다 없으면 이 지역 건너뜀
-    const live = region.lawdCd ? priceCache[region.lawdCd] : null;
+    const live = region.lawdCd ? priceCacheMap[region.lawdCd] : null;
     const dongStats = findDongStats(live?.byDong, region.dong);
     const priceBase = dongStats || live?.oneroom || null;
     // 실 데이터 없거나 jeonsa·rent 둘 다 null이면 건너뜀
@@ -614,14 +651,15 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
 
     const transitData = commuteTransit[idx];
     const transitMin = transitData?.minutes ?? estimateCommute(km, '대중교통');
-    const transitEstimated = !transitData?.minutes;
+    const transitEstimated = transitData?.isEstimated !== false;
 
     const carData = commuteCar[idx];
     const carMin = carData?.minutes ?? estimateCommute(km, '자가용');
-    const carEstimated = !carData?.minutes;
+    const carEstimated = carData?.isEstimated !== false;
 
-    // 대중교통 기준으로 90분 초과 지역 제외
-    if (transitMin > 90 && carMin > 90) return;
+    // 사용자가 선택한 교통수단 기준으로 60분 초과 지역 제외
+    const cutoffMin = transport === '자가용' ? carMin : transitMin;
+    if (cutoffMin > 60) return;
 
     // 생활권
     const life = facilityResults[idx] || region.defaultLife;
@@ -651,7 +689,6 @@ async function buildResults({ asset, income, workLat, workLng, loan, loanRate, t
       const ps = priceScore(monthlyMan, income);
       const ls = lifeScore(life, CANDIDATE_REGIONS.map((r) => r.defaultLife));
       const score = totalScore(cs, ps, ls);
-      if (score < 40) continue;
 
       const breakdown = {
         commute: Math.round(cs * 100),
@@ -819,6 +856,8 @@ export default function ResultsPage() {
     })
     .filter((item) => {
       if (!filters.loan && item.needsLoan) return false;
+      // 추천순일 때만 낮은 점수 지역 제외
+      if (filters.sort === 'score' && item.score < 40) return false;
       return true;
     })
     .sort((a, b) => {

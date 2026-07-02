@@ -10,6 +10,8 @@ export default function handler(req, res) {
   }
   try {
     const regions = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    // 정적 데이터 — CDN 캐시로 매 검색 672KB 재전송 방지
+    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');
     res.json({ nationwide: true, regions });
   } catch {
     res.json({ nationwide: false, regions: [] });
