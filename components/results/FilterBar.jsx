@@ -74,23 +74,6 @@ function DropdownPill({ label, active, options, value, onChange }) {
   );
 }
 
-// ── 토글 칩 (대출 포함 ON/OFF) ─────────────────────────────────────
-function TogglePill({ label, on, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-      padding: '9px 13px', borderRadius: 999, border: 'none', cursor: 'pointer',
-      fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap',
-      background: on ? 'var(--accent)' : 'var(--surface)',
-      color: on ? '#fff' : 'var(--ink-2)',
-      transition: 'all .14s ease', WebkitTapHighlightColor: 'transparent',
-    }}>
-      <span style={{ width: 7, height: 7, borderRadius: 999, background: on ? '#fff' : 'var(--ink-3)' }} />
-      {label}
-    </button>
-  );
-}
-
 export function FilterBar({ filters, setFilters, loanType, onLoanTypeChange }) {
   const ref = useRef(null);
   const drag = useRef({ active: false, startX: 0, scrollLeft: 0 });
@@ -164,23 +147,27 @@ export function FilterBar({ filters, setFilters, loanType, onLoanTypeChange }) {
           onChange={(v) => setFilters({ ...filters, floor: v })}
         />
       </div>
-      {/* 대출 포함 토글 */}
-      <TogglePill label="대출 포함" on={filters.loan} onClick={() => setFilters({ ...filters, loan: !filters.loan })} />
-      {/* 대출 상품 선택 — 대출 포함 켰을 때만 노출 */}
-      {filters.loan && (
-        <div data-no-drag>
-          <DropdownPill
-            label={loanType === '청년버팀목' ? '청년버팀목' : '버팀목'}
-            active={false}
-            value={loanType}
-            options={[
-              { value: '버팀목',    label: '버팀목' },
-              { value: '청년버팀목', label: '청년버팀목' },
-            ]}
-            onChange={onLoanTypeChange}
-          />
-        </div>
-      )}
+      {/* 대출 포함 여부 + 상품 선택 (하나의 드롭다운으로 통합) */}
+      <div data-no-drag>
+        <DropdownPill
+          label={!filters.loan ? '대출 미포함' : loanType}
+          active={filters.loan}
+          value={!filters.loan ? 'none' : loanType}
+          options={[
+            { value: 'none',      label: '대출 미포함' },
+            { value: '버팀목',    label: '버팀목 포함' },
+            { value: '청년버팀목', label: '청년버팀목 포함' },
+          ]}
+          onChange={(v) => {
+            if (v === 'none') {
+              setFilters({ ...filters, loan: false });
+            } else {
+              setFilters({ ...filters, loan: true });
+              onLoanTypeChange(v);
+            }
+          }}
+        />
+      </div>
     </div>
   );
 }
