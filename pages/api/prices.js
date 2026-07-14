@@ -4,10 +4,7 @@
 
 const BASE = 'https://apis.data.go.kr/1613000';
 
-const _cache = {};
-const CACHE_TTL = 6 * 60 * 60 * 1000;
-
-function classifyFloor(s) {
+export function classifyFloor(s) {
   const t = String(s || '').trim();
   if (/반지하|반지/.test(t)) return '반지하';
   if (/옥탑/.test(t)) return '옥탑';
@@ -15,7 +12,7 @@ function classifyFloor(s) {
   return '일반';
 }
 
-function parseItems(text) {
+export function parseItems(text) {
   return [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
     const get = (tag) => {
       const match = m[1].match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
@@ -81,12 +78,6 @@ export default async function handler(req, res) {
 
   if (!key) return res.json({ error: 'MOLIT_API_KEY not set' });
   if (!lawdCd) return res.json({ error: 'lawdCd required' });
-
-  const hit = _cache[lawdCd];
-  if (hit && Date.now() - hit.ts < CACHE_TTL) {
-    res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=43200');
-    return res.json(hit.data);
-  }
 
   // 공식 문서 기준 URL: /1613000/{ServiceName}/{operationName}
   const endpoints = [
@@ -155,7 +146,8 @@ export default async function handler(req, res) {
   };
 
   if (data.oneroom?.jeonsa || data.oneroom?.wolseRent) {
-    _cache[lawdCd] = { data, ts: Date.now() };
+    // Vercel 엣지에서 6시간 캐시 — 인스턴스 메모리가 아니라 CDN이 캐시하므로
+    // 콜드스타트/여러 리전 간에도 안정적으로 공유됨
     res.setHeader('Cache-Control', 's-maxage=21600, stale-while-revalidate=43200');
   } else {
     res.setHeader('Cache-Control', 'no-store');
