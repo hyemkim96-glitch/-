@@ -91,7 +91,7 @@ function TogglePill({ label, on, onClick }) {
   );
 }
 
-export function FilterBar({ filters, setFilters }) {
+export function FilterBar({ filters, setFilters, loanType, onLoanTypeChange }) {
   const ref = useRef(null);
   const drag = useRef({ active: false, startX: 0, scrollLeft: 0 });
 
@@ -166,6 +166,21 @@ export function FilterBar({ filters, setFilters }) {
       </div>
       {/* 대출 포함 토글 */}
       <TogglePill label="대출 포함" on={filters.loan} onClick={() => setFilters({ ...filters, loan: !filters.loan })} />
+      {/* 대출 상품 선택 — 대출 포함 켰을 때만 노출 */}
+      {filters.loan && (
+        <div data-no-drag>
+          <DropdownPill
+            label={loanType === '청년버팀목' ? '청년버팀목' : '버팀목'}
+            active={false}
+            value={loanType}
+            options={[
+              { value: '버팀목',    label: '버팀목' },
+              { value: '청년버팀목', label: '청년버팀목' },
+            ]}
+            onChange={onLoanTypeChange}
+          />
+        </div>
+      )}
     </div>
   );
 }

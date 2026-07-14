@@ -1,7 +1,8 @@
 // pages/results.jsx — 추천 결과 (실제 사용자 입력 기반 필터링 + API 연동)
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getFormData, getPrefsData, addHistory } from '../lib/storage';
+import { getLoanRate } from '../lib/api';
 import { buildResults } from '../lib/buildResults';
 import { formatKRW } from '../components/shared';
 import { IconMap, IconClose, IconList } from '../components/icons';
@@ -22,6 +23,8 @@ export default function ResultsPage() {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
   const [myAsset, setMyAsset] = useState(0);
   const [workCoords, setWorkCoords] = useState({ lat: null, lng: null });
+  const [loanType, setLoanType] = useState('버팀목'); // '버팀목' | '청년버팀목'
+  const hasSavedHistory = useRef(false);
 
   useEffect(() => {
     const f = getFormData();
@@ -31,26 +34,33 @@ export default function ResultsPage() {
     setWorkCoords({ lat: f.workLat || null, lng: f.workLng || null });
     setFilters((prev) => ({ ...prev, type: p.housing === '전세' ? '전세만' : p.housing === '월세' ? '월세만' : '전체', sort: prev.sort || 'score' }));
 
+    let cancelled = false;
     const slowTimer = setTimeout(() => setSlowWarning(true), 3000);
+    setLoading(true);
 
-    buildResults({
-      asset: assetVal,
-      income: parseInt(f.income || '0', 10),
-      workLat: f.workLat || null,
-      workLng: f.workLng || null,
-      loan: true,
-      loanRate: 3.5,
-      transport: p.transport || '대중교통',
+    getLoanRate(loanType).then((rate) => {
+      if (cancelled) return null;
+      return buildResults({
+        asset: assetVal,
+        income: parseInt(f.income || '0', 10),
+        workLat: f.workLat || null,
+        workLng: f.workLng || null,
+        loan: true,
+        loanRate: rate?.rate || 3.5,
+        transport: p.transport || '대중교통',
+      });
     }).then((results) => {
+      if (cancelled || !results) return;
       clearTimeout(slowTimer);
       setSlowWarning(false);
       setAllResults(results);
       setLoading(false);
 
-      // 실제 새 검색(step2 또는 히스토리 재조회)일 때만 히스토리 저장
+      // 실제 새 검색(step2 또는 히스토리 재조회)일 때만, 최초 1회만 히스토리 저장
       const isNewSearch = sessionStorage.getItem('zipter_new_search') === '1';
       sessionStorage.removeItem('zipter_new_search');
-      if (isNewSearch && f.work && results.length > 0) {
+      if (!hasSavedHistory.current && isNewSearch && f.work && results.length > 0) {
+        hasSavedHistory.current = true;
         addHistory({
           id: `h_${Date.now()}`,
           createdAt: Date.now(),
@@ -68,14 +78,15 @@ export default function ResultsPage() {
         });
       }
     }).catch((err) => {
+      if (cancelled) return;
       clearTimeout(slowTimer);
       setSlowWarning(false);
       setLoadError(err.message || 'UNKNOWN');
       setLoading(false);
     });
 
-    return () => clearTimeout(slowTimer);
-  }, []);
+    return () => { cancelled = true; clearTimeout(slowTimer); };
+  }, [loanType]);
 
   // 필터 + 정렬 적용
   const filtered = allResults
@@ -157,7 +168,7 @@ export default function ResultsPage() {
           <IconClose size={18} />
         </button>
       </div>
-      <FilterBar filters={filters} setFilters={setFilters} />
+      <FilterBar filters={filters} setFilters={setFilters} loanType={loanType} onLoanTypeChange={setLoanType} />
     </div>
   );
 
