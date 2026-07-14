@@ -264,7 +264,17 @@ export default function ResultsPage() {
                 ? (
                   <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ink-3)' }}>
                     <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>조건 내 결과가 없습니다</div>
-                    <p style={{ marginTop: 8, fontSize: 14 }}>대출 포함 시 더 많은 결과를 볼 수 있습니다</p>
+                    <p style={{ marginTop: 8, fontSize: 14 }}>
+                      {filters.loan ? '다른 조건을 조정해보세요' : '보증금이 자산보다 높은 매물은 "대출 포함"을 켜야 보여요'}
+                    </p>
+                    {!filters.loan && (
+                      <button
+                        onClick={() => setFilters({ ...filters, loan: true })}
+                        style={{ marginTop: 14, padding: '10px 22px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, background: 'var(--accent)', color: '#fff' }}
+                      >
+                        대출 포함 켜기
+                      </button>
+                    )}
                   </div>
                 )
                 : filtered.map((item, i) => <ResultCard key={item.id} item={item} onExpand={setExpanded} index={i} />)
