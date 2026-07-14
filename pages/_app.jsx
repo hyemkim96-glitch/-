@@ -7,6 +7,17 @@ export default function App({ Component, pageProps }) {
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <title>집터 — 주거 추천</title>
+        <meta name="description" content="직장 위치와 예산만 입력하면 국토부 실거래가 데이터 기반으로 출퇴근하기 좋고 예산에 맞는 동네를 추천해드려요." />
+        {/* 카카오톡·슬랙 등에 링크 공유 시 미리보기 카드로 쓰임 */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="집터 — 주거 추천" />
+        <meta property="og:description" content="직장 위치와 예산만 입력하면 출퇴근하기 좋은 우리 동네를 찾아드려요." />
+        <meta property="og:image" content="https://housingnearcompany.vercel.app/og-image.png" />
+        <meta property="og:url" content="https://housingnearcompany.vercel.app" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="집터 — 주거 추천" />
+        <meta name="twitter:description" content="직장 위치와 예산만 입력하면 출퇴근하기 좋은 우리 동네를 찾아드려요." />
+        <meta name="twitter:image" content="https://housingnearcompany.vercel.app/og-image.png" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" />
         {process.env.NEXT_PUBLIC_KAKAO_MAP_KEY && (
