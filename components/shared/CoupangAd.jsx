@@ -28,10 +28,12 @@ export function CoupangAd({ variant = 'card', index = 0 }) {
   const notice = '이 광고는 쿠팡 파트너스 활동의 일환으로, 이에 따라 일정액의 수수료를 제공받습니다.';
 
   if (variant === 'strip') {
+    // 홈 소개 카드 / 결과 카드와 같은 흰 카드 스타일로 감싸서 목록에 섞여도 자연스럽게
     return (
       <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-        padding: '10px 0', animation: 'fadeUp 0.35s ease both',
+        background: 'var(--surface)', borderRadius: 16, padding: '12px 14px',
+        boxShadow: 'var(--card-shadow)', animation: 'fadeUp 0.4s ease both',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
       }}>
         {iframe}
         <p style={{ margin: 0, fontSize: 10, color: 'var(--ink-3)', fontWeight: 500, textAlign: 'center', lineHeight: 1.4 }}>

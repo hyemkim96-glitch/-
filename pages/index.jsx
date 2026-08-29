@@ -96,7 +96,7 @@ export default function HistoryPage() {
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 10 }}><CoupangAd index={4} /></div>
+            <div style={{ marginTop: 10 }}><CoupangAd variant="strip" /></div>
           </div>
         ) : (
           <div style={{ padding: '4px 20px 8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
