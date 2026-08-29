@@ -295,6 +295,24 @@ export default function ResultsPage() {
                 * 출퇴근 시간은 직선거리 기반 추정값입니다
               </p>
             )}
+            {!loading && filtered.length > 0 && (
+              <div style={{ margin: '4px 0 0', padding: 12, background: 'var(--surface)', borderRadius: 16, boxShadow: 'var(--card-shadow)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                {/* 쿠팡 파트너스 다이내믹 배너 — g.js가 React에서 안 먹어서 widgets.html iframe 직삽 */}
+                <iframe
+                  src="https://ads-partners.coupang.com/widgets.html?id=1023798&template=carousel&trackingCode=AF5912368&subId=&width=300&height=250&tsource="
+                  width="300"
+                  height="250"
+                  frameBorder="0"
+                  scrolling="no"
+                  referrerPolicy="unsafe-url"
+                  title="쿠팡 파트너스 추천 상품"
+                  style={{ border: 'none', display: 'block', maxWidth: '100%' }}
+                />
+                <p style={{ margin: 0, fontSize: 11.5, color: 'var(--ink-3)', fontWeight: 500, textAlign: 'center', lineHeight: 1.5 }}>
+                  이 광고는 쿠팡 파트너스 활동의 일환으로, 이에 따라 일정액의 수수료를 제공받습니다.
+                </p>
+              </div>
+            )}
             {!loading && filtered.length > 0 && <div style={{ height: 80 }} />}
           </div>
         </div>
