@@ -139,7 +139,7 @@ export default function HistoryPage() {
 
       {toast && (
         <div style={{
-          position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)',
+          position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
           background: 'var(--ink)', color: '#fff', fontSize: 14, fontWeight: 600,
           padding: '12px 20px', borderRadius: 12, zIndex: 100, whiteSpace: 'nowrap',
           animation: 'popIn .2s ease',

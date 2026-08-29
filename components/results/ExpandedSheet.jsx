@@ -54,7 +54,7 @@ export function ExpandedSheet({ item, onClose, myAsset }) {
     : `https://www.dabangapp.com/search/${encodeURIComponent(item.dong)}`;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 40 }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: 40 }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(15,20,28,0.45)', animation: 'fade .2s ease' }} />
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, width: '100%', maxWidth: 480, margin: '0 auto', maxHeight: '90%', display: 'flex', flexDirection: 'column',
         background: 'var(--surface)', borderRadius: '20px 20px 0 0', animation: 'slideUp .28s cubic-bezier(.2,.8,.2,1)', overflow: 'hidden' }}>
