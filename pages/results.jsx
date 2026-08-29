@@ -297,9 +297,9 @@ export default function ResultsPage() {
                     return [card];
                   })
             }
-            {!loading && filtered.some((i) => i.transitLabel?.includes('*') || i.carLabel?.includes('*')) && (
+            {!loading && filtered.some((i) => i.transitLabel?.includes('약') || i.carLabel?.includes('약')) && (
               <p style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', margin: '4px 0 8px' }}>
-                * 출퇴근 시간은 직선거리 기반 추정값입니다
+                '약'으로 표시된 시간은 직선거리 기반 추정값입니다
               </p>
             )}
             {/* 결과가 3개 이하라 목록 중간에 광고가 안 들어간 경우엔 맨 끝에 */}
