@@ -291,8 +291,10 @@ export default function ResultsPage() {
                 )
                 : filtered.flatMap((item, i) => {
                     const card = <ResultCard key={item.id} item={item} onExpand={setExpanded} index={i} />;
-                    // 3번째 카드 뒤에 광고 1개 끼워넣기 (결과가 4개 이상일 때만)
-                    return i === 2 && filtered.length > 3 ? [card, <CoupangAd key="ad" index={i} />] : [card];
+                    // 3번째 카드 뒤엔 큰 카드 광고, 8번째 뒤엔 띠 배너 (목록이 그만큼 길 때만)
+                    if (i === 2 && filtered.length > 3) return [card, <CoupangAd key="ad-card" index={i} />];
+                    if (i === 7 && filtered.length > 8) return [card, <CoupangAd key="ad-strip" variant="strip" />];
+                    return [card];
                   })
             }
             {!loading && filtered.some((i) => i.transitLabel?.includes('*') || i.carLabel?.includes('*')) && (

@@ -132,7 +132,7 @@ export default function HistoryPage() {
                 </div>
               </div>
             ))}
-            <CoupangAd index={history.length} />
+            <CoupangAd variant="strip" />
           </div>
         )}
       </Screen>
