@@ -25,7 +25,12 @@ export function CoupangAd({ variant = 'card', index = 0 }) {
       style={{ border: 'none', display: 'block', maxWidth: '100%', borderRadius: variant === 'strip' ? 6 : 8 }}
     />
   );
-  const notice = '이 광고는 쿠팡 파트너스 활동의 일환으로, 이에 따라 일정액의 수수료를 제공받습니다.';
+  // 쿠팡 파트너스 필수 고지. 짧게 줄이되 "파트너스 활동 + 수수료 수령" 두 요건은 유지.
+  const notice = '쿠팡 파트너스 활동의 일환으로 일정액의 수수료를 제공받습니다.';
+  const noticeStyle = {
+    margin: 0, color: 'var(--ink-3)', fontWeight: 500, textAlign: 'center',
+    wordBreak: 'keep-all', // 한글 어절 단위 줄바꿈 — 마지막 줄에 "다."만 떨어지는 것 방지
+  };
 
   if (variant === 'strip') {
     // 홈 소개 카드 / 결과 카드와 같은 흰 카드 스타일로 감싸서 목록에 섞여도 자연스럽게
@@ -36,7 +41,7 @@ export function CoupangAd({ variant = 'card', index = 0 }) {
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
       }}>
         {iframe}
-        <p style={{ margin: 0, fontSize: 10, color: 'var(--ink-3)', fontWeight: 500, textAlign: 'center', lineHeight: 1.4 }}>
+        <p style={{ ...noticeStyle, fontSize: 10, lineHeight: 1.4 }}>
           {notice}
         </p>
       </div>
@@ -55,7 +60,7 @@ export function CoupangAd({ variant = 'card', index = 0 }) {
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)' }}>쿠팡 파트너스</span>
       </div>
       {iframe}
-      <p style={{ margin: 0, fontSize: 10.5, color: 'var(--ink-3)', fontWeight: 500, textAlign: 'center', lineHeight: 1.5 }}>
+      <p style={{ ...noticeStyle, fontSize: 10.5, lineHeight: 1.5 }}>
         {notice}
       </p>
     </div>
