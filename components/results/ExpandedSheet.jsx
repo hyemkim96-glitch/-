@@ -82,6 +82,11 @@ export function ExpandedSheet({ item, onClose, myAsset }) {
             <div style={{ width: 1, background: 'var(--line)', margin: '2px 0' }} />
             <DetailStat icon={<IconCar size={21} />} label="자가용" value={item.carLabel} />
           </div>
+          {item.loanNote && (
+            <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 10, background: 'var(--mid-weak)', fontSize: 12, fontWeight: 600, color: 'var(--mid)', lineHeight: 1.5, wordBreak: 'keep-all' }}>
+              {item.loanNote}
+            </div>
+          )}
           {item.breakdown && (
             <>
               <div style={{ marginTop: 22, fontSize: 15, fontWeight: 800, color: 'var(--ink)' }}>추천 근거</div>

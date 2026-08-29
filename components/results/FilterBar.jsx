@@ -1,6 +1,7 @@
 // components/results/FilterBar.jsx — 추천 결과 상단 필터 바 (정렬/거래유형/층/대출 토글)
 import { useState, useEffect, useRef } from 'react';
 import { IconChevDown } from '../icons';
+import { LOAN_LABELS } from '../../lib/loan';
 
 // ── DropdownPill: 클릭 시 드롭다운 펼치는 필터 칩 ─────────────────
 function DropdownPill({ label, active, options, value, onChange }) {
@@ -150,13 +151,14 @@ export function FilterBar({ filters, setFilters, loanType, onLoanTypeChange }) {
       {/* 대출 포함 여부 + 상품 선택 (하나의 드롭다운으로 통합) */}
       <div data-no-drag>
         <DropdownPill
-          label={!filters.loan ? '대출 미포함' : loanType}
+          label={!filters.loan ? '대출 미포함' : (LOAN_LABELS[loanType] || loanType)}
           active={filters.loan}
           value={!filters.loan ? 'none' : loanType}
           options={[
             { value: 'none',      label: '대출 미포함' },
             { value: '버팀목',    label: '버팀목 포함' },
             { value: '청년버팀목', label: '청년버팀목 포함' },
+            { value: '일반',      label: '일반 전세대출 포함' },
           ]}
           onChange={(v) => {
             if (v === 'none') {

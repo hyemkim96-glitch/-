@@ -3,7 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getFormData, getPrefsData, addHistory } from '../lib/storage';
 import { getLoanRate } from '../lib/api';
-import { buildResults } from '../lib/buildResults';
+import { buildResults, normalizeAnnualIncome } from '../lib/buildResults';
+import { calcLoanInterest } from '../lib/loan';
 import { formatKRW } from '../components/shared';
 import { IconMap, IconClose, IconList } from '../components/icons';
 import { FilterBar } from '../components/results/FilterBar';
@@ -23,15 +24,19 @@ export default function ResultsPage() {
   const [allResults, setAllResults] = useState([]);
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
   const [myAsset, setMyAsset] = useState(0);
+  const [myAnnualIncome, setMyAnnualIncome] = useState(0);
   const [workCoords, setWorkCoords] = useState({ lat: null, lng: null });
-  const [loanType, setLoanType] = useState('버팀목'); // '버팀목' | '청년버팀목'
+  const [loanType, setLoanType] = useState('버팀목'); // '버팀목' | '청년버팀목' | '일반'
+  const [loanRates, setLoanRates] = useState({ policy: 3.5, general: 4.5 });
   const hasSavedHistory = useRef(false);
 
   useEffect(() => {
     const f = getFormData();
     const p = getPrefsData();
     const assetVal = parseInt(f.asset || '0', 10);
+    const annualIncomeVal = normalizeAnnualIncome(parseInt(f.income || '0', 10));
     setMyAsset(assetVal);
+    setMyAnnualIncome(annualIncomeVal);
     setWorkCoords({ lat: f.workLat || null, lng: f.workLng || null });
     setFilters((prev) => ({ ...prev, type: p.housing === '전세' ? '전세만' : p.housing === '월세' ? '월세만' : '전체', sort: prev.sort || 'score' }));
 
@@ -39,15 +44,20 @@ export default function ResultsPage() {
     const slowTimer = setTimeout(() => setSlowWarning(true), 3000);
     setLoading(true);
 
-    getLoanRate(loanType).then((rate) => {
+    Promise.all([getLoanRate(loanType), getLoanRate('일반')]).then(([rate, gRate]) => {
       if (cancelled) return null;
+      const policy = rate?.rate || 3.5;
+      const general = gRate?.rate || 4.5;
+      setLoanRates({ policy, general });
       return buildResults({
         asset: assetVal,
-        income: parseInt(f.income || '0', 10),
+        income: annualIncomeVal,
         workLat: f.workLat || null,
         workLng: f.workLng || null,
         loan: true,
-        loanRate: rate?.rate || 3.5,
+        loanType,
+        loanRate: policy,
+        generalRate: general,
         transport: p.transport || '대중교통',
       });
     }).then((results) => {
@@ -103,16 +113,22 @@ export default function ResultsPage() {
       const floorStats = item.byFloor?.[filters.floor];
       if (!floorStats || floorStats.count === 0) return item;
 
+      const relend = (deposit) => calcLoanInterest({
+        deposit, asset: myAsset, annualIncome: myAnnualIncome, loanType,
+        policyRate: loanRates.policy, generalRate: loanRates.general,
+      });
+
       if (item.type === '전세') {
         const deposit = floorStats.jeonsa;
         if (!deposit) return item;
-        const loanNeeded = Math.max(0, deposit - myAsset);
-        const newMonthly = Math.round((loanNeeded * 0.035) / 12) + (item.maintenanceFee || 0);
+        const li = relend(deposit);
+        const newMonthly = li.monthlyInterest + (item.maintenanceFee || 0);
         return {
           ...item,
           depositMan: deposit,
           capitalMan: deposit,
           monthlyMan: newMonthly,
+          loanNote: li.note,
           priceLabel: formatKRW(deposit),
           avgLabel: formatKRW(deposit),
           needsLoan: deposit > myAsset,
@@ -121,13 +137,14 @@ export default function ResultsPage() {
         const rent = floorStats.wolseRent;
         const depAmt = floorStats.wolseDeposit || 0;
         if (!rent) return item;
-        const loanNeeded = Math.max(0, depAmt - myAsset);
-        const newMonthly = Math.round((loanNeeded * 0.035) / 12) + rent + (item.maintenanceFee || 0);
+        const li = relend(depAmt);
+        const newMonthly = li.monthlyInterest + rent + (item.maintenanceFee || 0);
         return {
           ...item,
           depositMan: depAmt,
           depositForRent: depAmt,
           monthlyMan: newMonthly,
+          loanNote: li.note,
           priceLabel: `보증금 ${formatKRW(depAmt)} · 월 ${rent}만원`,
           avgLabel: `보증금 ${formatKRW(depAmt)} / 월 ${rent}만원`,
           needsLoan: depAmt > myAsset,

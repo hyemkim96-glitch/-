@@ -206,7 +206,7 @@ export default function Step1Page() {
               <Chip label="월세만" selected={prefs.housing === '월세'} onClick={() => updatePrefs({ housing: '월세' })} />
             </OptionGroup>
             <MoneyField label="가용 자산" placeholder="예: 5,000" value={form.asset} onChange={(v) => updateForm({ asset: v })} />
-            <MoneyField label="월 소득 (세후)" placeholder="예: 320" value={form.income} onChange={(v) => updateForm({ income: v })} />
+            <MoneyField label="세전 연봉" placeholder="예: 4,000" value={form.income} onChange={(v) => updateForm({ income: v })} />
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 9 }}>
                 <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink-2)', flexShrink: 0 }}>직장 주소</label>
