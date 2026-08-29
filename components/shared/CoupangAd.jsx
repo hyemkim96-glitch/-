@@ -37,7 +37,7 @@ export function CoupangAd({ variant = 'card', index = 0 }) {
       }}>
         {iframe}
         <p style={{ margin: 0, fontSize: 10, color: 'var(--ink-3)', fontWeight: 500, textAlign: 'center', lineHeight: 1.4 }}>
-          AD · {notice}
+          {notice}
         </p>
       </div>
     );
