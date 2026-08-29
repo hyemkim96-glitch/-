@@ -10,6 +10,7 @@ import { FilterBar } from '../components/results/FilterBar';
 import { ResultCard, SkeletonCard } from '../components/results/ResultCard';
 import { ExpandedSheet } from '../components/results/ExpandedSheet';
 import { ResultsKakaoMap } from '../components/results/ResultsKakaoMap';
+import { CoupangAd } from '../components/shared/CoupangAd';
 
 // ── ResultsPage ────────────────────────────────────────────────────
 export default function ResultsPage() {
@@ -288,31 +289,19 @@ export default function ResultsPage() {
                     )}
                   </div>
                 )
-                : filtered.map((item, i) => <ResultCard key={item.id} item={item} onExpand={setExpanded} index={i} />)
+                : filtered.flatMap((item, i) => {
+                    const card = <ResultCard key={item.id} item={item} onExpand={setExpanded} index={i} />;
+                    // 3번째 카드 뒤에 광고 1개 끼워넣기 (결과가 4개 이상일 때만)
+                    return i === 2 && filtered.length > 3 ? [card, <CoupangAd key="ad" index={i} />] : [card];
+                  })
             }
             {!loading && filtered.some((i) => i.transitLabel?.includes('*') || i.carLabel?.includes('*')) && (
               <p style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', margin: '4px 0 8px' }}>
                 * 출퇴근 시간은 직선거리 기반 추정값입니다
               </p>
             )}
-            {!loading && filtered.length > 0 && (
-              <div style={{ margin: '4px 0 0', padding: 12, background: 'var(--surface)', borderRadius: 16, boxShadow: 'var(--card-shadow)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                {/* 쿠팡 파트너스 다이내믹 배너 — g.js가 React에서 안 먹어서 widgets.html iframe 직삽 */}
-                <iframe
-                  src="https://ads-partners.coupang.com/widgets.html?id=1023798&template=carousel&trackingCode=AF5912368&subId=&width=300&height=250&tsource="
-                  width="300"
-                  height="250"
-                  frameBorder="0"
-                  scrolling="no"
-                  referrerPolicy="unsafe-url"
-                  title="쿠팡 파트너스 추천 상품"
-                  style={{ border: 'none', display: 'block', maxWidth: '100%' }}
-                />
-                <p style={{ margin: 0, fontSize: 11.5, color: 'var(--ink-3)', fontWeight: 500, textAlign: 'center', lineHeight: 1.5 }}>
-                  이 광고는 쿠팡 파트너스 활동의 일환으로, 이에 따라 일정액의 수수료를 제공받습니다.
-                </p>
-              </div>
-            )}
+            {/* 결과가 3개 이하라 목록 중간에 광고가 안 들어간 경우엔 맨 끝에 */}
+            {!loading && filtered.length > 0 && filtered.length <= 3 && <CoupangAd />}
             {!loading && filtered.length > 0 && <div style={{ height: 80 }} />}
           </div>
         </div>

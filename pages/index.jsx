@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { getHistory, deleteHistory, setFormData, setPrefsData } from '../lib/storage';
 import { formatKRW } from '../components/shared';
 import { Button } from '../components/shared';
+import { CoupangAd } from '../components/shared/CoupangAd';
 import { Screen, Footer } from '../components/layout/Screen';
 import {
   IconHome, IconSearch, IconTrash, IconPlus, IconBuilding, IconWon,
@@ -95,6 +96,7 @@ export default function HistoryPage() {
                 </div>
               ))}
             </div>
+            <div style={{ marginTop: 10 }}><CoupangAd index={4} /></div>
           </div>
         ) : (
           <div style={{ padding: '4px 20px 8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -130,6 +132,7 @@ export default function HistoryPage() {
                 </div>
               </div>
             ))}
+            <CoupangAd index={history.length} />
           </div>
         )}
       </Screen>
