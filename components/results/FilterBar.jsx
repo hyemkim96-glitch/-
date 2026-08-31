@@ -1,5 +1,5 @@
 // components/results/FilterBar.jsx — 추천 결과 상단 필터 바 (정렬/거래유형/층/대출 토글)
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { IconChevDown } from '../icons';
 
 // 대출 드롭다운에 노출되는 상품명
@@ -9,12 +9,29 @@ const LOAN_FILTER_LABELS = {
   '일반': '일반 전세 대출',
 };
 
+// 드롭다운이 화면 가장자리에 붙지 않도록 두는 여백(px)
+const EDGE_GAP = 10;
+
 // ── DropdownPill: 클릭 시 드롭다운 펼치는 필터 칩 ─────────────────
-function DropdownPill({ label, active, options, value, onChange }) {
+// scrollRef: 칩들이 담긴 가로 스크롤 컨테이너. 칩을 누르면 그 칩을 왼쪽으로 당겨서
+//            드롭다운이 놓일 자리를 확보하고, 스크롤되는 동안 드롭다운도 칩을 따라간다.
+function DropdownPill({ label, active, options, value, onChange, scrollRef }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const btnRef = useRef(null);
   const ref = useRef(null);
+
+  // 칩의 현재 위치에 맞춰 드롭다운을 다시 배치 (화면 밖으로 나가면 안쪽으로 당김)
+  const updatePos = useCallback(() => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const width = ref.current ? ref.current.offsetWidth : 0;
+    const maxLeft = window.innerWidth - width - EDGE_GAP;
+    setPos({
+      top: rect.bottom + 6,
+      left: width ? Math.max(EDGE_GAP, Math.min(rect.left, maxLeft)) : rect.left,
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -23,15 +40,34 @@ function DropdownPill({ label, active, options, value, onChange }) {
           btnRef.current && !btnRef.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
+    // capture로 받아야 필터 줄의 가로 스크롤까지 잡힌다 (스크롤 애니메이션 중에도 따라감)
+    window.addEventListener('scroll', updatePos, true);
+    window.addEventListener('resize', updatePos);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      window.removeEventListener('scroll', updatePos, true);
+      window.removeEventListener('resize', updatePos);
+    };
+  }, [open, updatePos]);
+
+  // 메뉴가 그려진 뒤 실제 너비로 다시 보정 (첫 페인트 전에 반영)
+  useLayoutEffect(() => {
+    if (open) updatePos();
+  }, [open, updatePos]);
 
   function handleOpen() {
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 6, left: rect.left });
+    if (open) { setOpen(false); return; }
+    const row = scrollRef && scrollRef.current;
+    if (row && btnRef.current) {
+      // 누른 칩을 줄의 왼쪽 끝으로 당긴다 → 칩들이 전체적으로 왼쪽으로 이동
+      const next = row.scrollLeft
+        + btnRef.current.getBoundingClientRect().left
+        - row.getBoundingClientRect().left
+        - EDGE_GAP;
+      row.scrollTo({ left: Math.max(0, next), behavior: 'smooth' });
     }
-    setOpen((o) => !o);
+    updatePos();
+    setOpen(true);
   }
 
   return (
@@ -56,16 +92,17 @@ function DropdownPill({ label, active, options, value, onChange }) {
           position: 'fixed', top: pos.top, left: pos.left, zIndex: 200,
           background: 'var(--surface)', borderRadius: 14, overflow: 'hidden',
           boxShadow: '0 8px 24px rgba(0,0,0,0.14), 0 0 0 1px var(--line)',
-          minWidth: 120,
+          minWidth: 120, maxWidth: `calc(100vw - ${EDGE_GAP * 2}px)`,
         }}>
           {options.map((opt, i) => (
             <button
               key={opt.value}
               onClick={() => { onChange(opt.value); setOpen(false); }}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
                 width: '100%', padding: '12px 16px', border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 14, fontWeight: 600, textAlign: 'left',
+                whiteSpace: 'nowrap',
                 background: value === opt.value ? 'var(--accent-weak)' : 'transparent',
                 color: value === opt.value ? 'var(--accent)' : 'var(--ink)',
                 borderTop: i ? '1px solid var(--bg)' : 'none',
@@ -114,6 +151,7 @@ export function FilterBar({ filters, setFilters, loanType, onLoanTypeChange }) {
       {/* 추천순 — 가장 앞 */}
       <div data-no-drag>
         <DropdownPill
+          scrollRef={ref}
           label={filters.sort === 'monthly' ? '고정비순' : filters.sort === 'commute' ? '출퇴근순' : '추천순'}
           active
           value={filters.sort || 'score'}
@@ -128,6 +166,7 @@ export function FilterBar({ filters, setFilters, loanType, onLoanTypeChange }) {
       {/* 거래 유형 */}
       <div data-no-drag>
         <DropdownPill
+          scrollRef={ref}
           label={filters.type === '전세만' ? '전세' : filters.type === '월세만' ? '월세' : '전·월세'}
           active={filters.type !== '전체'}
           value={filters.type}
@@ -142,6 +181,7 @@ export function FilterBar({ filters, setFilters, loanType, onLoanTypeChange }) {
       {/* 층 유형 필터 */}
       <div data-no-drag>
         <DropdownPill
+          scrollRef={ref}
           label={filters.floor === '전체' ? '모든 층' : filters.floor}
           active={filters.floor !== '전체'}
           value={filters.floor}
@@ -157,6 +197,7 @@ export function FilterBar({ filters, setFilters, loanType, onLoanTypeChange }) {
       {/* 대출 포함 여부 + 상품 선택 (하나의 드롭다운으로 통합) */}
       <div data-no-drag>
         <DropdownPill
+          scrollRef={ref}
           label={!filters.loan ? '대출 미포함' : (LOAN_FILTER_LABELS[loanType] || loanType)}
           active={filters.loan}
           value={!filters.loan ? 'none' : loanType}
